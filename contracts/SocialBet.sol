@@ -26,8 +26,8 @@ contract SocialBet {
 	uint public m_feeBalance = 0;
 
 	uint public m_tradeFee = 1;
-	uint public m_publicFee = 1;
-	uint public m_privateFee = 1;
+	uint public m_publicFee = 2;
+	uint public m_privateFee = 2;
 	uint public m_minAmount = 10000000000000000;
 
 	/*****************
@@ -36,7 +36,7 @@ contract SocialBet {
 
 	enum State { OPEN, CLOSE, CANCELED }
 
-	enum Pick { NULL, HOME, AWAY, DRAW }
+	enum Pick { NULL, HOME, AWAY, DRAW, CANCELED }
 
 	enum Type { HOMEAWAYDRAW, HOMEAWAY }
 
@@ -51,13 +51,14 @@ contract SocialBet {
 	event LogBalanceChange(address indexed account, uint oldBalance, uint newBalance);
 	event LogNewEvents(uint[] id, bytes32[] ipfsAddress);
 	event LogResultsEvent(uint[] id, uint[] result);
-	event LogCancelEvent(uint id);
+	event LogCancelEvent(uint[] id);
 	event LogNewOffer(uint id, uint indexed eventId, address indexed owner, uint amount, uint price, uint pick);
 	event LogUpdateOffer(uint indexed id, address indexed owner, uint amount, uint price);
 	event LogOfferClosed(uint id, address indexed owner);
 	event LogNewBet(uint id, uint indexed eventId, uint[] positions, uint pick);
 	event LogBetClosed(uint id);
 	event LogNewPosition(uint id, uint indexed betId, address indexed owner, uint amount, uint amountToEarn, uint price, uint role);
+	event LogUpdatePosition(uint id, address indexed owner, uint amount, uint amountToEarn, uint price);
 	
 	/*****************
 	***** STRUCT *****
@@ -70,6 +71,7 @@ contract SocialBet {
 		Type		_type;
 		Pick 		_result;
 		State 		_state;
+		uint 		_resultAttempts;
 	}
 
 	struct Offer {
@@ -162,7 +164,7 @@ contract SocialBet {
 					m_nbEvents = add(m_nbEvents, 1);
 
 					// Create new Event
-					Event memory newEvent = Event(m_nbEvents, _ipfsAddressArr[i], _timestampStartArr[i], Type(_typeArr[i]), Pick.NULL, State.OPEN);
+					Event memory newEvent = Event(m_nbEvents, _ipfsAddressArr[i], _timestampStartArr[i], Type(_typeArr[i]), Pick.NULL, State.OPEN, 0);
 
 					// Add Event inside mapping 
 					events[newEvent._id] = newEvent;
@@ -193,49 +195,39 @@ contract SocialBet {
 
 			Event memory _event = events[_eventIdArr[i]];
 
-			if( ( uint(_event._result) == uint(Pick.NULL) ) && ( uint(_event._state) == uint(State.OPEN) ) ) {
+			_event = setResult(_event, _resultArr[i]);
 
-				if( _resultArr[i] > uint(Pick.NULL) ) {
+			events[_event._id] = _event;
 
-					if( ( uint(_event._type) == uint(Type.HOMEAWAY) && _resultArr[i] <= uint(Pick.AWAY) ) || ( uint(_event._type) == uint(Type.HOMEAWAYDRAW) && _resultArr[i] <= uint(Pick.DRAW) ) ) {
-
-						_event._result = Pick(_resultArr[i]);
-						_event._state = State.CLOSE;
-
-						events[_event._id] = _event;
-
-						_results[i] = _resultArr[i];
-					}
-					else {
-						_results[i] = 0;
-					}
-
-				}
-				else {
-					_results[i] = 0;
-				}
-			}
-			else {
-				_results[i] = uint(_event._result);
-			}
+			_results[i] = uint(_event._result);
 		}
 
 		emit LogResultsEvent(_eventIdArr, _results);
 	}
 
-	function cancelEvent(uint _eventId) external isAdmin {
+	function cancelEvent(uint[] _eventIdArr) external isAdmin {
 
-		require(_eventId <= m_nbEvents);
-		require(_eventId > 0);
-		require(uint(events[_eventId]._state) == uint(State.OPEN));
+		uint _length = _eventIdArr.length;
 
-		Event memory _event = events[_eventId];
+		uint[] memory _arr = new uint[](_length);
 
-		_event._state = State.CANCELED;
+		for (uint i=0; i<_length; i++) {
 
-		events[_event._id] = _event;
+			require(_eventIdArr[i] <= m_nbEvents);
+			require(_eventIdArr[i] > 0);
+			require(uint(events[_eventIdArr[i]]._state) == uint(State.OPEN));
 
-		emit LogCancelEvent(_event._id);
+			Event memory _event = events[_eventIdArr[i]];
+
+			_event._state = State.CANCELED;
+
+			events[_event._id] = _event;
+
+			_arr[i] = _event._id;
+
+		}
+
+		emit LogCancelEvent(_arr);
 
 	}
 
@@ -249,9 +241,9 @@ contract SocialBet {
 	function openOffer (uint _eventId, uint _amount, uint _price, uint _pick) public {
 
 		// Checks
-		require (_amount > m_minAmount);
+		require (_amount >= m_minAmount);
 		require (_amount <= balances[msg.sender]);
-		require (_price > m_minAmount);
+		require (_price >= m_minAmount);
 		require (_eventId > 0);
 		require (_eventId <= m_nbEvents);
 		if(events[_eventId]._type == Type.HOMEAWAY) {
@@ -280,6 +272,19 @@ contract SocialBet {
 
 		emit LogBalanceChange(msg.sender, _curBalance, _newBalance);
 		emit LogNewOffer(newOffer._id, newOffer._eventId, newOffer._owner, newOffer._amount, newOffer._price, uint(newOffer._pick));
+	}
+
+	function updateOffer (uint _offerId, uint _price) public {
+		
+		require(_offerId <= m_nbOffers);
+		require (offers[_offerId]._id > 0);
+		require (offers[_offerId]._owner == msg.sender);
+		require (offers[_offerId]._state == State.OPEN);
+		require (_price >= m_minAmount);
+		
+		offers[_offerId]._price = _price;
+
+		emit LogUpdateOffer(offers[_offerId]._id, offers[_offerId]._owner, offers[_offerId]._amount, offers[_offerId]._price);
 	}
 
 	function askCloseOffer (uint _offerId) public {
@@ -383,6 +388,74 @@ contract SocialBet {
 		}
 	}
 
+	function updatePosition(uint _positionId, uint _price) public {
+
+		require (_positionId <= m_nbPositions);
+		require (_price > m_minAmount);
+
+		Position memory _position = positions[_positionId];
+		Bet memory _bet = bets[_position._betId];
+		Event memory _event = events[_bet._eventId];
+
+		require (_event._timestampStart < now);
+		require (uint(_event._state) == uint(State.OPEN));
+		require (_position._owner == msg.sender);
+		require (_position._amount > m_minAmount);
+		
+		_position._price = _price;
+
+		positions[_position._id] = _position;
+		
+		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price);
+	}
+
+	function buyPosition(uint _positionId, uint _amount) public {
+
+		require (balances[msg.sender] >= _amount);
+		require (_positionId <= m_nbPositions);
+		require (_amount > m_minAmount);
+
+		Position memory _position = positions[_positionId];
+		Bet memory _bet = bets[_position._betId];
+		Event memory _event = events[_bet._eventId];
+
+		require (_position._price > m_minAmount);
+		require (_event._timestampStart < now);
+		require (uint(_event._state) == uint(State.OPEN));
+		require (_position._owner == msg.sender);
+		require (_position._amount > m_minAmount);
+		
+		uint _newPositionAmount =  div(mul(_position._amount, _amount), _position._price);
+		uint _newPositionAmountToEarn = div(mul(_position._amountToEarn, _amount), _position._price);
+
+		_position._amount = sub(_position._amount, _newPositionAmount);
+		_position._amountToEarn = sub(_position._amountToEarn, _newPositionAmountToEarn);
+		_position._price = sub(_position._price, _amount);
+
+		Position memory p = createPosition(_position._betId, msg.sender, _newPositionAmount, _newPositionAmountToEarn, _position._role);
+
+		positions[_position._id] = _position;
+
+		bets[_bet._id]._positions.push(p._id);
+
+		uint _curBalanceBuyer = balances[msg.sender];
+		uint _newBalanceBuyer = sub(_curBalanceBuyer, _amount);
+		balances[msg.sender] = _newBalanceBuyer;
+
+		uint _fees = div(mul(_amount, m_tradeFee), 100);
+
+		m_feeBalance = add(m_feeBalance, _fees);
+
+		uint _curBalanceSeller = balances[_position._owner];
+		uint _newBalanceSeller = add(_curBalanceSeller, sub(_amount, _fees));
+		balances[msg.sender] = _newBalanceSeller;
+
+		emit LogBalanceChange(msg.sender, _curBalanceBuyer, _newBalanceBuyer);
+		emit LogBalanceChange(_position._owner, _curBalanceSeller, _newBalanceSeller);
+		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price);
+
+	}
+
 	function claimBetEarnings(uint _betId) public {
 
 		require (_betId <= m_nbBets);
@@ -390,17 +463,15 @@ contract SocialBet {
 		Bet memory _bet = bets[_betId];
 		Event memory _event = events[_bet._eventId];
 
-		require(uint(_event._state) >= uint(State.CLOSE));
-		require(uint(_event._state) <= uint(State.CANCELED));
+		require(uint(_event._state) == uint(State.CLOSE));
+		require(uint(_event._result) > uint(Pick.NULL));
 		require(uint(_bet._state) == uint(State.OPEN));
 
 		uint _length = _bet._positions.length;
 		uint i;
 		Position memory _position;
 
-		if(uint(_event._state) == uint(State.CLOSE)) {
-
-			require(uint(_event._result) > uint(Pick.NULL));
+		if(uint(_event._result) <= uint(Pick.DRAW)) {
 
 			for (i=0; i<_length; i++) {
 
@@ -423,7 +494,7 @@ contract SocialBet {
 			}
 		}
 		
-		else if(uint(_event._state) == uint(State.CANCELED)) {
+		if(uint(_event._result) == uint(Pick.CANCELED)) {
 
 			for (i=0; i<_length; i++) {
 
@@ -441,7 +512,7 @@ contract SocialBet {
 		bets[_bet._id] = _bet;
 
 		emit LogBetClosed(_bet._id);
-	}
+	}	
 
 	function deposit () payable public {
 		require (msg.value > 0);
@@ -501,6 +572,35 @@ contract SocialBet {
 		positions[newPosition._id] = newPosition;
 
 		emit LogNewPosition(newPosition._id, newPosition._betId, newPosition._owner, newPosition._amount, newPosition._amountToEarn, newPosition._price, uint(newPosition._role));
+	}
+
+	function setResult (Event _event, uint _result) internal returns (Event) {
+
+		if( ( uint(_event._result) == uint(Pick.NULL) ) && ( uint(_event._state) != uint(State.CLOSE) ) ) {
+
+			_event._resultAttempts = add(_event._resultAttempts, 1);
+
+			if( _result > uint(Pick.NULL) ) {
+
+				if( _result == uint(Pick.CANCELED) ) {
+					_event._result = Pick(_result);
+					_event._state = State.CLOSE;
+				}
+
+				else if( ( uint(_event._type) == uint(Type.HOMEAWAY) && _result <= uint(Pick.AWAY) ) || ( uint(_event._type) == uint(Type.HOMEAWAYDRAW) && _result <= uint(Pick.DRAW) ) ) {
+					_event._result = Pick(_result);
+					_event._state = State.CLOSE;
+				}
+			}
+			else {
+				if( _event._resultAttempts >= 3 ) {
+					_event._result = Pick.CANCELED;
+					_event._state = State.CLOSE;
+				}
+			}
+		}
+
+		return _event;
 	}
 
 	/*************************
