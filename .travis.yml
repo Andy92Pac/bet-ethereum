@@ -3,7 +3,10 @@ sudo: required
 language: node_js
 node_js:
   - "9.4.0"
- 
+
+env:
+  - MNENOMIC="arrive cousin combine wide dad crime health example brother airport enjoy dream"
+  - INFURA_API_KEY=p9ppAgAsml9nCtiru67E
 matrix:
   include:
     - os: linux
