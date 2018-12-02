@@ -13,7 +13,7 @@ contract('SocialBet', (accounts) => {
 	it("should add new event", async () => {
 		instance = await SocialBet.deployed();
 		
-		watcher = instance.LogNewEvent();
+		/*watcher = instance.LogNewEvent();
 
 		await instance.addEvent("QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4", 1640718470, {from: accounts[0]});
 
@@ -41,7 +41,7 @@ contract('SocialBet', (accounts) => {
 
 		await instance.openOffer(1, 2, 1, 1, {from: accounts[0]});
 
-		await instance.buyOffer(1, 1, {from: accounts[0]});
+		await instance.buyOffer(1, 1, {from: accounts[0]});*/
 
 	});
 })
