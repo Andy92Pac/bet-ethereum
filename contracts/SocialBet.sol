@@ -400,7 +400,7 @@ contract SocialBet {
 		require (_event._timestampStart < now);
 		require (uint(_event._state) == uint(State.OPEN));
 		require (_position._owner == msg.sender);
-		require (_position._amount > m_minAmount);
+		require (_position._amount >= m_minAmount);
 		
 		_position._price = _price;
 
