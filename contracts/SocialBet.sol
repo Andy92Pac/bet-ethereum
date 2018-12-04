@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.1;
 
 /// @title SocialBet
 /// @notice
@@ -6,7 +6,7 @@ pragma solidity ^0.4.24;
 contract SocialBet {
 
 	/// @notice Owner of SocialBet smart contract 
-	address public owner;
+	address payable public owner;
 
 	/// @notice Administrators mapping 
 	mapping (address => bool) public admins;
@@ -182,7 +182,7 @@ contract SocialBet {
 	/// @param _typeArr Array of the types of the saved events
 	/// @param _ipfsAddressArr Array of the hash of the JSONs containing details of the saved events
 	/// @param _timestampStartArr Array of the start timestamp of the saved events
-	function addEventBulk (uint[] _typeArr, bytes32[] _ipfsAddressArr, uint[] _timestampStartArr) external isAdmin {
+	function addEventBulk (uint[] calldata _typeArr, bytes32[] calldata _ipfsAddressArr, uint[] calldata _timestampStartArr) external isAdmin {
 
 		require(_typeArr.length == _ipfsAddressArr.length);
 		require(_typeArr.length == _timestampStartArr.length);
@@ -201,7 +201,7 @@ contract SocialBet {
 	/// @notice Bulk set events result 
 	/// @param _eventIdArr Array of the id of the events to set result to
 	/// @param _resultArr Array of the results to set
-	function setEventResultBulk (uint[] _eventIdArr, uint[] _resultArr) external isAdmin {
+	function setEventResultBulk (uint[] calldata _eventIdArr, uint[] calldata _resultArr) external isAdmin {
 
 		require(_eventIdArr.length == _resultArr.length);
 
@@ -218,7 +218,7 @@ contract SocialBet {
 
 	/// @notice Bulk cancel of events
 	/// @param _eventIdArr Array of the id of the events to cancel
-	function cancelEventBulk (uint[] _eventIdArr) external isAdmin {
+	function cancelEventBulk (uint[] calldata _eventIdArr) external isAdmin {
 
 		uint _length = _eventIdArr.length;
 
@@ -323,7 +323,7 @@ contract SocialBet {
 	/// @notice Fully or partly buy multiple offers and open bets according to the parameters
 	/// @param _offerIds Ids of the offers to buy
 	/// @param _amount Amount the bettor wants to buy the offers with
-	function buyOfferBulk (uint[] _offerIds, uint _amount) external {
+	function buyOfferBulk (uint[] calldata _offerIds, uint _amount) external {
 
 		require (_amount >= m_minAmount);
 		require (balances[msg.sender] >= _amount);
@@ -361,10 +361,10 @@ contract SocialBet {
 
 		require (_positionId <= m_nbPositions);
 		require (_price >= m_minAmount);
-		require (events[bets[_position._betId]._eventId]._timestampStart > now);
-		require (uint(events[bets[_position._betId]._eventId]._state) == uint(State.OPEN));
-		require (_position._owner == msg.sender);
-		require (_position._amount >= m_minAmount);
+		require (events[bets[positions[_positionId]._betId]._eventId]._timestampStart > now);
+		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) == uint(State.OPEN));
+		require (positions[_positionId]._owner == msg.sender);
+		require (positions[_positionId]._amount >= m_minAmount);
 
 		Position memory _position = positions[_positionId];
 
@@ -384,8 +384,8 @@ contract SocialBet {
 		require (_positionId <= m_nbPositions);
 		require (_amount > m_minAmount);
 		require (positions[_positionId]._price > m_minAmount);
-		require (events[bets[_position._betId]._eventId]._timestampStart < now);
-		require (uint(events[bets[_position._betId]._eventId]._state) == uint(State.OPEN));
+		require (events[bets[positions[_positionId]._betId]._eventId]._timestampStart < now);
+		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) == uint(State.OPEN));
 		require (positions[_positionId]._owner == msg.sender);
 		require (positions[_positionId]._amount > m_minAmount);
 
@@ -424,12 +424,12 @@ contract SocialBet {
 		require (uint(events[bets[_betId]._eventId]._result) > uint(Pick.NULL));
 		require (uint(bets[_betId]._state) == uint(State.OPEN));
 
-		uint _length = _bet._positions.length;
-		uint i;
-		Position memory _position;
-
 		Bet memory _bet = bets[_betId];
 		Event memory _event = events[_bet._eventId];
+		Position memory _position;
+
+		uint _length = _bet._positions.length;
+		uint i;
 
 		if(uint(_event._result) <= uint(Pick.DRAW)) {
 
@@ -605,7 +605,7 @@ contract SocialBet {
 	/// @param _amount Amount the owner have in the created position
 	/// @param _amountToEarn Amount the owner can earn with the created position
 	/// @param _role Role of the owner of the position in the associated bet
-	function _createPosition (uint _betId, address _owner, uint _amount, uint _amountToEarn, Role _role) private returns (Position newPosition) {
+	function _createPosition (uint _betId, address _owner, uint _amount, uint _amountToEarn, Role _role) private returns (Position memory newPosition) {
 
 		m_nbPositions = add(m_nbPositions, 1);
 
