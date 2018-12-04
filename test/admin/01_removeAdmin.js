@@ -2,7 +2,7 @@ var SocialBet = artifacts.require("./../SocialBet.sol");
 
 contract('SocialBet', (accounts) => {
 
-	let catchRevert = require("./../exceptions.js").catchRevert;
+	let exceptions = require("./../exceptions.js");
 
 	let instance;
 	let watcher;
@@ -39,7 +39,7 @@ contract('SocialBet', (accounts) => {
 
 		await instance.addAdmin(admin, {from: owner});
 
-		await catchRevert(instance.removeAdmin(admin, {from: user}));
+		await exceptions.catchRevert(instance.removeAdmin(admin, {from: user}));
 
 		isAdmin = await instance.admins.call(admin);
 
@@ -52,7 +52,7 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(isAdmin, true);
 
-		await catchRevert(instance.removeAdmin(owner, {from: owner}));
+		await exceptions.catchRevert(instance.removeAdmin(owner, {from: owner}));
 
 		isAdmin = await instance.admins.call(owner);
 

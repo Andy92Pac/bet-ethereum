@@ -465,6 +465,9 @@ contract SocialBet {
 
 	/// @notice Deposit 
 	function deposit () payable external {
+
+		require(msg.value > 0);
+
 		_addBalance(msg.sender, msg.value);
 
 		emit LogDeposit(msg.sender, msg.value);
@@ -473,6 +476,9 @@ contract SocialBet {
 	/// @notice Withdraw
 	/// @param _amount Amount to withdraw from user balance in smart contract to his account
 	function withdraw (uint _amount) external {
+		
+		require(_amount > 0);
+
 		_subBalance(msg.sender, _amount);
 
 		msg.sender.transfer(_amount);
@@ -490,7 +496,7 @@ contract SocialBet {
 	function _addBalance (address _addr, uint _amount) private {
 
 		uint _curBalance = balances[_addr];
-		uint _newBalance = sub(_curBalance, _amount);
+		uint _newBalance = add(_curBalance, _amount);
 		balances[_addr] = _newBalance;
 
 		emit LogBalanceChange(_addr, _curBalance, _newBalance);
@@ -623,9 +629,9 @@ contract SocialBet {
 		return _a - _b;
 	}
 
-	function add(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
-		c = _a + _b;
-		assert(c >= _a);
+	function add(uint256 a, uint256 b) internal pure returns (uint256) {
+		uint256 c = a + b;
+		assert(c >= a);
 		return c;
 	}
 

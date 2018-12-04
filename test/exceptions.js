@@ -1,4 +1,4 @@
-const PREFIX = "VM Exception while processing transaction: ";
+const PREFIX = "Returned error: VM Exception while processing transaction: ";
 
 async function tryCatch(promise, message) {
     try {

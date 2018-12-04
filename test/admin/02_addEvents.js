@@ -10,13 +10,13 @@ contract('SocialBet', (accounts) => {
 
 	"QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"
 
-	it("should add new event", async () => {
+	/*it("should add new event", async () => {
 
 		instance = await SocialBet.deployed();
 		
 		watcher = instance.LogNewEvents();
 
-		await instance.addEvents([0], ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"], [1840718470], {from: accounts[0]});
+		await instance.addEventBulk([0], ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"], [1840718470], {from: accounts[0]});
 
 		var nbEvents = await instance.m_nbEvents.call();
 
@@ -28,7 +28,7 @@ contract('SocialBet', (accounts) => {
 		assert.equal(logEvents[0].args.id.valueOf(), 1);
 		assert.equal(web3.toAscii(logEvents[0].args.ipfsAddress.valueOf()), "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4");
 		assert.equal(logEvents[0].args.timestampStart, 1640718470);
-*/
+
 		var event = await instance.events(1);
 
 		console.log(event);
@@ -37,7 +37,7 @@ contract('SocialBet', (accounts) => {
 		assert.equal(web3.toAscii(event[1]), "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4");
 		assert.equal(event[2], 1640718470);
 		assert.equal(event[3].toNumber(), 0);
-*/
 
-	});
+
+	});*/
 })

@@ -2,13 +2,15 @@ var SocialBet = artifacts.require("./../SocialBet.sol");
 
 contract('SocialBet', (accounts) => {
 
-	let catchRevert = require("./../exceptions.js").catchRevert;
+	let exceptions = require("./../exceptions.js");
 
 	let instance;
 	let watcher;
 	let logEvents;
+
 	let owner;
 	let admin;
+	let user;
 	let isAdmin;
 
 	before("setup", async () => {
@@ -37,7 +39,7 @@ contract('SocialBet', (accounts) => {
 
 		isAdmin = await instance.admins.call(user);
 
-		await catchRevert(instance.addAdmin(user, {from: user}));
+		await exceptions.catchRevert(instance.addAdmin(user, {from: user}));
 
 		isAdmin = await instance.admins.call(user);
 
