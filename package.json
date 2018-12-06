@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/Andy92Pac/bet-ethereum#readme",
   "dependencies": {
+    "bs58": "^4.0.1",
     "dotenv": "^6.1.0",
     "truffle": "^4.1.14",
     "truffle-hdwallet-provider": "0.0.6"

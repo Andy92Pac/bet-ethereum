@@ -127,9 +127,13 @@ contract SocialBet {
 
 	/// @dev Check that the offer exists and is still open 
 	modifier offerAvailable (uint _offerId) {
+		require (_offerId > 0);
 		require (_offerId <= m_nbOffers);
-		require (offers[_offerId]._id > 0);
 		require (offers[_offerId]._state == State.OPEN);
+		require (uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN));
+		require (uint(events[offers[_offerId]._eventId]._timestampStart) > now);
+		require (offers[_offerId]._amount >= m_minAmount);
+		require (offers[_offerId]._price >= m_minAmount);
 		_;
 	}
 
@@ -239,9 +243,9 @@ contract SocialBet {
 	/// @param _pick Pick of the event the bookmaker is opening the offer on
 	function openOffer (uint _eventId, uint _amount, uint _price, uint _pick) external eventAvailable(_eventId) pickValid(_eventId, _pick) {
 
+		require (_price >= m_minAmount);
 		require (_amount >= m_minAmount);
 		require (_amount <= balances[msg.sender]);
-		require (_price >= m_minAmount);
 
 		m_nbOffers = add(m_nbOffers, 1);
 
@@ -281,11 +285,9 @@ contract SocialBet {
 	/// @param _amount Amount the bettor wants to buy the offer with
 	function buyOffer (uint _offerId, uint _amount) public offerAvailable(_offerId) {
 
-		require (offers[_offerId]._amount >= m_minAmount);
-		require (offers[_offerId]._price >= _amount);
 		require (_amount >= m_minAmount);
 		require (balances[msg.sender] >= _amount);
-		require (uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN));
+		require (offers[_offerId]._price >= _amount);
 
 		Offer memory offer = offers[_offerId];
 
@@ -537,41 +539,6 @@ contract SocialBet {
 		}
 	}
 
-	/// @notice Set result
-	/// @param _eventId Id of the event
-	/// @param _result Result of the event
-	function _setEventResult (uint _eventId, uint _result) private returns (Pick _savedResult) {
-
-		Event memory _event = events[_eventId];
-
-		if( ( uint(_event._result) == uint(Pick.NULL) ) && ( uint(_event._state) != uint(State.CLOSE) ) ) {
-
-			_event._resultAttempts = add(_event._resultAttempts, 1);
-
-			if( _result > uint(Pick.NULL) ) {
-
-				if( _result == uint(Pick.CANCELED) ) {
-					_event._result = Pick(_result);
-					_event._state = State.CLOSE;
-				}
-
-				else if( ( uint(_event._type) == uint(Type.HOMEAWAY) && _result <= uint(Pick.AWAY) ) || ( uint(_event._type) == uint(Type.HOMEAWAYDRAW) && _result <= uint(Pick.DRAW) ) ) {
-					_event._result = Pick(_result);
-					_event._state = State.CLOSE;
-				}
-			}
-			else {
-				if( _event._resultAttempts >= 3 ) {
-					_event._result = Pick.CANCELED;
-					_event._state = State.CLOSE;
-				}
-			}
-		}
-		events[_event._id] = _event;
-
-		_savedResult = _event._result;
-	}
-
 	/// @notice Cancel event
 	/// @param _eventId Id of the event
 	function _cancelEvent(uint _eventId) private returns (uint _id) {
@@ -588,6 +555,48 @@ contract SocialBet {
 		}
 	}
 
+	/// @notice Set result
+	/// @param _eventId Id of the event
+	/// @param _result Result of the event
+	function _setEventResult (uint _eventId, uint _result) private returns (Pick _savedResult) {
+
+		_savedResult = Pick.NULL;
+
+		if(_eventId <= m_nbEvents && _eventId > 0) {
+
+			Event memory _event = events[_eventId];
+
+			if( _event._timestampStart < now ) {
+
+				if( ( uint(_event._result) == uint(Pick.NULL) ) && ( uint(_event._state) != uint(State.CLOSE) ) ) {
+
+					_event._resultAttempts = add(_event._resultAttempts, 1);
+
+					if( _result > uint(Pick.NULL) ) {
+
+						if( _result == uint(Pick.CANCELED) ) {
+							_event._result = Pick(_result);
+							_event._state = State.CLOSE;
+						}
+
+						else if( ( uint(_event._type) == uint(Type.HOMEAWAY) && _result <= uint(Pick.AWAY) ) || ( uint(_event._type) == uint(Type.HOMEAWAYDRAW) && _result <= uint(Pick.DRAW) ) ) {
+							_event._result = Pick(_result);
+							_event._state = State.CLOSE;
+						}
+					}
+					else {
+						if( _event._resultAttempts >= 3 ) {
+							_event._result = Pick.CANCELED;
+							_event._state = State.CLOSE;
+						}
+					}
+				}
+				events[_event._id] = _event;
+
+				_savedResult = _event._result;
+			}
+		}
+	}
 
 	/// @notice Close an existing offer
 	/// @param _offerId Id of the offer to close

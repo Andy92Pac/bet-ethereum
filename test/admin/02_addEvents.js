@@ -2,42 +2,94 @@ var SocialBet = artifacts.require("./../SocialBet.sol");
 
 contract('SocialBet', (accounts) => {
 
-	let catchRevert = require("./../exceptions.js").catchRevert;
+	let exceptions = require("./../exceptions.js");
+	let utils = require("./../utils.js");
 
 	let instance;
 	let watcher;
 	let logEvents;
 
-	"QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"
+	let owner;
+	let admin;
+	let user;
+	let isAdmin;
+	let nbEvents;
 
-	/*it("should add new event", async () => {
+	before("setup", async () => {
+		
+		owner = accounts[0];
+		admin = accounts[1];
+		user = accounts[2];
 
 		instance = await SocialBet.deployed();
+
+		await instance.addAdmin(admin, {from: owner});
+
+		isAdmin = await instance.admins.call(admin);
+
+		assert.equal(isAdmin, true);
+	});
+
+	it("should add new event", async () => {
 		
-		watcher = instance.LogNewEvents();
+		// watcher = instance.LogNewEvents();
 
-		await instance.addEventBulk([0], ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"], [1840718470], {from: accounts[0]});
+		nbEvents = await instance.m_nbEvents.call();
 
-		var nbEvents = await instance.m_nbEvents.call();
+		assert.equal(nbEvents, 0);
+
+		var typeArr = [0];
+		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
+		var timestampStartArr = [1840718470];
+
+		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
+
+		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
+
+		nbEvents = await instance.m_nbEvents.call();
+
+		assert.equal(nbEvents, 1);
+	});
+
+	it("should fail to add new event because of different array lengths", async () => {
+		
+		// watcher = instance.LogNewEvents();
+
+		nbEvents = await instance.m_nbEvents.call();
 
 		assert.equal(nbEvents, 1);
 
-		logEvents = await watcher.get();
+		var typeArr = [0, 1];
+		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
+		var timestampStartArr = [1840718470];
 
-		/*assert.equal(logEvents.length, 1);
-		assert.equal(logEvents[0].args.id.valueOf(), 1);
-		assert.equal(web3.toAscii(logEvents[0].args.ipfsAddress.valueOf()), "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4");
-		assert.equal(logEvents[0].args.timestampStart, 1640718470);
+		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
 
-		var event = await instance.events(1);
+		await exceptions.catchRevert(instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin}));
 
-		console.log(event);
-/*
-		assert.equal(event[0].toNumber(), 1);
-		assert.equal(web3.toAscii(event[1]), "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4");
-		assert.equal(event[2], 1640718470);
-		assert.equal(event[3].toNumber(), 0);
+		nbEvents = await instance.m_nbEvents.call();
 
+		assert.equal(nbEvents, 1);
+	});
 
-	});*/
+	it("should not add second event because start time is in the past", async () => {
+
+		nbEvents = await instance.m_nbEvents.call();
+
+		assert.equal(nbEvents, 1);
+
+		var typeArr = [0, 1];
+		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4", "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
+		var timestampStartArr = [1840718470, 1540718470];
+
+		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
+
+		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
+
+		nbEvents = await instance.m_nbEvents.call();
+
+		assert.equal(nbEvents, 2);
+
+	});
+
 })
