@@ -16,7 +16,7 @@ contract('SocialBet', (accounts) => {
 	let nbEvents;
 	let event;
 
-	before("setup", async () => {
+	beforeEach("setup", async () => {
 		
 		owner = accounts[0];
 		admin = accounts[1];
