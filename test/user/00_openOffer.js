@@ -95,7 +95,7 @@ contract('SocialBet', (accounts) => {
 		offer = await instance.offers.call(nbOffers);
 
 		assert.equal(offer._id, parseInt(nbOffers));
-		assert.equal(offer._eventId, 1);
+		assert.equal(offer._eventId, parseInt(nbEvents));
 		assert.equal(offer._owner, user);
 		assert.equal(offer._amount, web3.utils.toWei('1', 'ether'));
 		assert.equal(offer._price, web3.utils.toWei('1', 'ether'));
@@ -115,11 +115,7 @@ contract('SocialBet', (accounts) => {
 
 		oldNbOffers = await instance.m_nbOffers.call();
 
-		userBalance = await instance.balances.call(user);
-
 		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
-
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
 
 		await exceptions.catchRevert(instance.openOffer(nbEvents + 1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
 
@@ -136,9 +132,7 @@ contract('SocialBet', (accounts) => {
 
 		oldNbOffers = await instance.m_nbOffers.call();
 
-		userBalance = await instance.balances.call(user);
-
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
+		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
 		await exceptions.catchRevert(instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('0.0001', 'ether'), 4));
 

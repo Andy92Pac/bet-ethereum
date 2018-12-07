@@ -65,9 +65,11 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(event._state.toString(), 0);
 
-		await instance.cancelEventBulk([2], {from: admin});
+		nbEvents = await instance.m_nbEvents.call();
 
-		event = await instance.events.call(2);
+		await instance.cancelEventBulk([parseInt(nbEvents) + 1], {from: admin});
+
+		event = await instance.events.call(parseInt(nbEvents) + 1);
 
 		assert.equal(event._state.toString(), 0);
 	});

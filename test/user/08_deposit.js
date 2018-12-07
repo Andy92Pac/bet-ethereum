@@ -21,6 +21,11 @@ contract('SocialBet', (accounts) => {
 		user = accounts[2];
 
 		instance = await SocialBet.deployed();
+
+		userBalance = await instance.balances.call(user);
+
+		if(parseInt(userBalance) > 0)
+			await instance.withdraw(parseInt(userBalance), {from: user});
 	});
 
 	it("should be an empty balance", async () => {
@@ -45,6 +50,8 @@ contract('SocialBet', (accounts) => {
 
 	it("should be a 1 ETH balance", async () => {
 
+		var snapshotId = (await utils.snapshot()).result;
+
 		userBalance = await instance.balances.call(user);
 
 		assert.equal(userBalance, 0);
@@ -54,9 +61,13 @@ contract('SocialBet', (accounts) => {
 		userBalance = await instance.balances.call(user);
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
+
+		await utils.revert(snapshotId);
 	});
 
 	it("should be a 2 ETH balance", async () => {
+
+		var snapshotId = (await utils.snapshot()).result;
 
 		userBalance = await instance.balances.call(user);
 
@@ -67,6 +78,8 @@ contract('SocialBet', (accounts) => {
 		userBalance = await instance.balances.call(user);
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 2);
+
+		await utils.revert(snapshotId);
 	});
 
 })
