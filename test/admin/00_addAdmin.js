@@ -14,7 +14,7 @@ contract('SocialBet', (accounts) => {
 	let user;
 	let isAdmin;
 
-	var snapshotStartId = (await utils.snapshot()).result;
+	var snapshotStartId;
 
 	before("setup", async () => {
 		
@@ -23,6 +23,8 @@ contract('SocialBet', (accounts) => {
 		user = accounts[2];
 
 		instance = await SocialBet.deployed();
+
+		snapshotStartId = (await utils.snapshot()).result;
 	});
 
 	it("should add admin", async () => {
