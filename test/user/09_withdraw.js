@@ -46,42 +46,29 @@ contract('SocialBet', (accounts) => {
 
 	it("should revert because try to withdraw too much", async () => {
 
-		userBalance = await instance.balances.call(user);
-		contractBalance = await web3.eth.getBalance(instance.address);
-
-		assert.equal(userBalance, 0);
-		assert.equal(contractBalance, 0);
-
 		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
-		userBalance = await instance.balances.call(user);
+		oldUserBalance = await instance.balances.call(user);
 
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
-
-		await exceptions.catchRevert(instance.withdraw(web3.utils.toWei('2', 'ether'), {from: user}));
+		await exceptions.catchRevert(instance.withdraw(oldUserBalance.toString()+1, {from: user}));
 
 		userBalance = await instance.balances.call(user);
 		contractBalance = await web3.eth.getBalance(instance.address);
 
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
-		assert.equal(web3.utils.fromWei(contractBalance), 1);
+		assert.equal(userBalance.toString(), oldUserBalance.toString());
 	});
 
 	it("should withdraw 1 ETH", async () => {
 
-		userBalance = await instance.balances.call(user);
-		contractBalance = await web3.eth.getBalance(instance.address);
+		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
-		assert.equal(web3.utils.fromWei(contractBalance), 1);
+		oldUserBalance = await instance.balances.call(user);
 
 		await instance.withdraw(web3.utils.toWei('1', 'ether'), {from: user});
 
 		userBalance = await instance.balances.call(user);
 		contractBalance = await web3.eth.getBalance(instance.address);
 
-		assert.equal(userBalance, 0);
-		assert.equal(contractBalance, 0);
+		assert.equal(parseInt(userBalance), parseInt(oldUserBalance) - web3.utils.toWei('1', 'ether'));
 	});
-
 })

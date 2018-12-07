@@ -3,7 +3,7 @@ var SocialBet = artifacts.require("./../SocialBet.sol");
 contract('SocialBet', (accounts) => {
 
 	let exceptions = require("./../exceptions.js");
-
+	let utils = require("./../utils.js");
 
 	let instance;
 	let watcher;
