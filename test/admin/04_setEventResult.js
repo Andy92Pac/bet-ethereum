@@ -80,14 +80,12 @@ contract('SocialBet', (accounts) => {
 
 		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
 
-		console.log(typeArr);
-
 		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
 
-		nbEvents = await instance.m_nbEvents.call();
-		console.log(nbEvents.toString());
+		nbEvents1 = await instance.m_nbEvents.call();
+		console.log(nbEvents1.toString());
 
-		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
+		assert.equal(parseInt(nbEvents1), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
