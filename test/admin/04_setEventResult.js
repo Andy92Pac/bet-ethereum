@@ -16,8 +16,6 @@ contract('SocialBet', (accounts) => {
 	let nbEvents;
 	let event;
 
-	var snapshotStartId = (await utils.snapshot()).result;
-
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -37,9 +35,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -52,17 +48,17 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.setEventResultBulk([1], [1], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [1], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1); // 1 is value for CLOSE state
 		assert.equal(event._result.toString(), 1); // 1 is value for HOME result
@@ -74,9 +70,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -89,17 +83,17 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await exceptions.catchRevert(instance.setEventResultBulk([1], [1,2], {from: admin}));
+		await exceptions.catchRevert(instance.setEventResultBulk([nbEvents], [1,2], {from: admin}));
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 		assert.equal(event._result.toString(), 0); // 0 is value for NULL result
@@ -112,9 +106,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -127,15 +119,15 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.setEventResultBulk([1], [1], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [1], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 		assert.equal(event._result.toString(), 0); // 0 is value for NULL result
@@ -148,9 +140,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -163,25 +153,25 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.setEventResultBulk([1], [1], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [1], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1); // 1 is value for CLOSE state
 		assert.equal(event._result.toString(), 1); // 1 is value for HOME result
 		assert.equal(event._resultAttempts.toString(), 1);
 
-		await instance.setEventResultBulk([1], [2], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [2], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1); // 1 is value for CLOSE state
 		assert.equal(event._result.toString(), 1); // 1 is value for HOME result
@@ -194,9 +184,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -209,33 +197,33 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.setEventResultBulk([1], [0], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [0], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 		assert.equal(event._result.toString(), 0); // 0 is value for NULL result
 		assert.equal(event._resultAttempts.toString(), 1);
 
-		await instance.setEventResultBulk([1], [0], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [0], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for CLOSE state
 		assert.equal(event._result.toString(), 0); // 0 is value for NULL result
 		assert.equal(event._resultAttempts.toString(), 2);
 
-		await instance.setEventResultBulk([1], [0], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [0], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1); // 1 is value for CLOSE state
 		assert.equal(event._result.toString(), 4); // 1 is value for CANCELED result
@@ -248,9 +236,7 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -263,17 +249,17 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.setEventResultBulk([1], [5], {from: admin});
+		await instance.setEventResultBulk([nbEvents], [5], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 		assert.equal(event._result.toString(), 0); // 0 is value for NULL result
@@ -281,7 +267,5 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	});
-
-	await utils.revert(snapshotStartId);
 
 })

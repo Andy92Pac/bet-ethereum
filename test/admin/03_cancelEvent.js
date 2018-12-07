@@ -16,8 +16,6 @@ contract('SocialBet', (accounts) => {
 	let nbEvents;
 	let event;
 
-	var snapshotStartId = (await utils.snapshot()).result;
-
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -35,9 +33,7 @@ contract('SocialBet', (accounts) => {
 
 	it("should cancel event", async () => {
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -50,15 +46,15 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
-		await instance.cancelEventBulk([1], {from: admin});
+		await instance.cancelEventBulk([nbEvents], {from: admin});
 
-		event = await instance.events.call(1);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 2); // 2 is value for CANCELED state
 	});
@@ -89,30 +85,26 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 2);
-
-		event = await instance.events.call(2);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 0); // 0 is value for OPEN state
 
 		var snapshotId = (await utils.snapshot()).result;
 		await utils.timeTravel();
 		
-		await instance.setEventResultBulk([2], [1]);
+		await instance.setEventResultBulk([nbEvents], [1]);
 
-		event = await instance.events.call(2);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1); // 1 is value for CLOSE state
 
-		await instance.cancelEventBulk([2], {from: admin});
+		await instance.cancelEventBulk([nbEvents], {from: admin});
 
-		event = await instance.events.call(2);
+		event = await instance.events.call(nbEvents);
 
 		assert.equal(event._state.toString(), 1);
 
 		await utils.revert(snapshotId);
 	})
-
-	await utils.revert(snapshotStartId);
 
 })

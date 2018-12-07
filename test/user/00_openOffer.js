@@ -18,8 +18,6 @@ contract('SocialBet', (accounts) => {
 	let event;
 	let offer;
 
-	var snapshotStartId = (await utils.snapshot()).result;
-
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -34,9 +32,7 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(isAdmin, true);
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -49,19 +45,23 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 	});
 
 	it("should abort because of empty balance", async () => {
 
-		await exceptions.catchRevert(instance.openOffer(1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
+		oldNbOffers = await instance.m_nbOffers.call();
+
+		await exceptions.catchRevert(instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
 
 		nbOffers = await instance.m_nbOffers.call();
 
-		assert.equal(nbOffers, 0);
+		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers));
 	});
 
 	it("should abort because of price inferior to min value", async () => {
+
+		oldNbOffers = await instance.m_nbOffers.call();
 
 		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
@@ -69,30 +69,32 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
 
-		await exceptions.catchRevert(instance.openOffer(1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('0.0001', 'ether'), 1));
+		await exceptions.catchRevert(instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('0.0001', 'ether'), 1));
 
 		nbOffers = await instance.m_nbOffers.call();
 
-		assert.equal(nbOffers, 0);
+		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers));
 	});
 
 	it("should open offer", async () => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
+		oldNbOffers = await instance.m_nbOffers.call();
+
 		userBalance = await instance.balances.call(user);
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
 
-		await instance.openOffer(1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1, {from: user});
+		await instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1, {from: user});
 
 		nbOffers = await instance.m_nbOffers.call();
 
-		assert.equal(nbOffers, 1);
+		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers) + 1);
 
-		offer = await instance.offers.call(1);
+		offer = await instance.offers.call(nbOffers);
 
-		assert.equal(offer._id, 1);
+		assert.equal(offer._id, parseInt(nbOffers));
 		assert.equal(offer._eventId, 1);
 		assert.equal(offer._owner, user);
 		assert.equal(offer._amount, web3.utils.toWei('1', 'ether'));
@@ -109,30 +111,42 @@ contract('SocialBet', (accounts) => {
 
 	it("should abort because event is not available", async () => {
 
+		var snapshotId = (await utils.snapshot()).result;
+
+		oldNbOffers = await instance.m_nbOffers.call();
+
 		userBalance = await instance.balances.call(user);
+
+		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
 
-		await exceptions.catchRevert(instance.openOffer(2, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
+		await exceptions.catchRevert(instance.openOffer(nbEvents + 1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
 
 		nbOffers = await instance.m_nbOffers.call();
 
-		assert.equal(nbOffers, 0);
+		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers));
+
+		await utils.revert(snapshotId);
 	});
 
 	it("should abort because pick is not valid", async () => {
 
+		var snapshotId = (await utils.snapshot()).result;
+
+		oldNbOffers = await instance.m_nbOffers.call();
+
 		userBalance = await instance.balances.call(user);
 
 		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
 
-		await exceptions.catchRevert(instance.openOffer(1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('0.0001', 'ether'), 4));
+		await exceptions.catchRevert(instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('0.0001', 'ether'), 4));
 
 		nbOffers = await instance.m_nbOffers.call();
 
-		assert.equal(nbOffers, 0);
-	});
+		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers));
 
-	await utils.revert(snapshotStartId);
+		await utils.revert(snapshotId);
+	});
 
 })

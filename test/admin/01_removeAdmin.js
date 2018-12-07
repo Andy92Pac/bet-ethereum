@@ -3,7 +3,6 @@ var SocialBet = artifacts.require("./../SocialBet.sol");
 contract('SocialBet', (accounts) => {
 
 	let exceptions = require("./../exceptions.js");
-	let utils = require("./../utils.js");
 
 	let instance;
 	let watcher;
@@ -11,8 +10,6 @@ contract('SocialBet', (accounts) => {
 	let owner;
 	let admin;
 	let isAdmin;
-
-	var snapshotStartId = (await utils.snapshot()).result;
 
 	before("setup", async () => {
 		
@@ -61,6 +58,4 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(isAdmin, true);
 	});
-
-	await utils.revert(snapshotStartId);
 })

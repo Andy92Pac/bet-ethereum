@@ -15,8 +15,6 @@ contract('SocialBet', (accounts) => {
 	let isAdmin;
 	let nbEvents;
 
-	var snapshotStartId = (await utils.snapshot()).result;
-
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -36,9 +34,7 @@ contract('SocialBet', (accounts) => {
 		
 		// watcher = instance.LogNewEvents();
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 0);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -50,16 +46,14 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 	});
 
 	it("should fail to add new event because of different array lengths", async () => {
 		
 		// watcher = instance.LogNewEvents();
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 1);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0, 1];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -71,14 +65,12 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 1);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents));
 	});
 
 	it("should not add second event because start time is in the past", async () => {
 
-		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(nbEvents, 1);
+		oldNbEvents = await instance.m_nbEvents.call();
 
 		var typeArr = [0, 1];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4", "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -90,10 +82,8 @@ contract('SocialBet', (accounts) => {
 
 		nbEvents = await instance.m_nbEvents.call();
 
-		assert.equal(nbEvents, 2);
+		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 	});
-
-	await utils.revert(snapshotStartId);
 
 })
