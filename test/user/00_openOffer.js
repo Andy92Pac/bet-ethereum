@@ -47,7 +47,7 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 	});
-
+/*
 	it("should abort because of empty balance", async () => {
 
 		oldNbOffers = await instance.m_nbOffers.call();
@@ -108,7 +108,7 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	});
-
+*/
 	it("should abort because event is not available", async () => {
 
 		var snapshotId = (await utils.snapshot()).result;
@@ -127,7 +127,7 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	});
-
+/*
 	it("should abort because pick is not valid", async () => {
 
 		var snapshotId = (await utils.snapshot()).result;
@@ -144,5 +144,5 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	});
-
+*/
 })

@@ -132,8 +132,6 @@ contract('SocialBet', (accounts) => {
 
 		var snapshotId = (await utils.snapshot()).result;
 
-		oldNbEvents = await instance.m_nbEvents.call();
-
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
 		var timestamp = parseInt((new Date()).getTime() / 1000) + 300;
@@ -144,8 +142,6 @@ contract('SocialBet', (accounts) => {
 		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
 
 		nbEvents = await instance.m_nbEvents.call();
-
-		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
 		await utils.timeTravel();
 
