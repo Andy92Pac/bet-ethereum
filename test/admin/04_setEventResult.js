@@ -75,7 +75,7 @@ contract('SocialBet', (accounts) => {
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
 		var timestamp = parseInt((new Date()).getTime() / 1000) + 300;
-		var timestampStartArr = [timestamp, timestamp];
+		var timestampStartArr = [timestamp];
 
 		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
 
