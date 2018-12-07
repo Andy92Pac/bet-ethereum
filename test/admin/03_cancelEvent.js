@@ -16,7 +16,9 @@ contract('SocialBet', (accounts) => {
 	let nbEvents;
 	let event;
 
-	beforeEach("setup", async () => {
+	var snapshotStartId = (await utils.snapshot()).result;
+
+	before("setup", async () => {
 		
 		owner = accounts[0];
 		admin = accounts[1];
@@ -110,5 +112,7 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	})
+
+	await utils.revert(snapshotStartId);
 
 })

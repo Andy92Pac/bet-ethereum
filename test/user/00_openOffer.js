@@ -18,6 +18,8 @@ contract('SocialBet', (accounts) => {
 	let event;
 	let offer;
 
+	var snapshotStartId = (await utils.snapshot()).result;
+
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -130,5 +132,7 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(nbOffers, 0);
 	});
+
+	await utils.revert(snapshotStartId);
 
 })

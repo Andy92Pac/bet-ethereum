@@ -18,6 +18,8 @@ contract('SocialBet', (accounts) => {
 	let event;
 	let offer;
 
+	var snapshotStartId = (await utils.snapshot()).result;
+
 	before("setup", async () => {
 		
 		owner = accounts[0];
@@ -127,5 +129,7 @@ contract('SocialBet', (accounts) => {
 		assert.equal(offer._price, web3.utils.toWei('1.5', 'ether'));
 
 	});
+
+	await utils.revert(snapshotStartId);
 
 })
