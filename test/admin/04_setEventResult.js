@@ -71,6 +71,7 @@ contract('SocialBet', (accounts) => {
 		var snapshotId = (await utils.snapshot()).result;
 
 		oldNbEvents = await instance.m_nbEvents.call();
+		console.log(oldNbEvents.toString());
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
@@ -82,6 +83,7 @@ contract('SocialBet', (accounts) => {
 		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
 
 		nbEvents = await instance.m_nbEvents.call();
+		console.log(nbEvents.toString());
 
 		assert.equal(parseInt(nbEvents), parseInt(oldNbEvents) + 1);
 
