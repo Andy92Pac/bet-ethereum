@@ -115,6 +115,8 @@ contract('SocialBet', (accounts) => {
 
 		oldNbOffers = await instance.m_nbOffers.call();
 
+		nbEvents = await instance.m_nbEvents.call();
+
 		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
 		await exceptions.catchRevert(instance.openOffer(nbEvents + 1, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1));
