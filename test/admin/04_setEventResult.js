@@ -72,7 +72,7 @@ contract('SocialBet', (accounts) => {
 
 		oldNbEvents = await instance.m_nbEvents.call();
 		console.log(oldNbEvents.toString());
-/*
+
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
 		var timestamp = parseInt((new Date()).getTime() / 1000) + 300;
@@ -80,8 +80,10 @@ contract('SocialBet', (accounts) => {
 
 		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
 
+		console.log(typeArr);
+
 		await instance.addEventBulk(typeArr, bytes32Arr, timestampStartArr, {from: admin});
-*/
+
 		nbEvents = await instance.m_nbEvents.call();
 		console.log(nbEvents.toString());
 
