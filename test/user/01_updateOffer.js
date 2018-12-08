@@ -60,7 +60,7 @@ contract('SocialBet', (accounts) => {
 		offer = await instance.offers.call(nbOffers);
 
 		assert.equal(offer._id, parseInt(nbOffers));
-		assert.equal(offer._eventId, 1);
+		assert.equal(offer._eventId, nbEvents);
 		assert.equal(offer._owner, user);
 		assert.equal(offer._amount, web3.utils.toWei('1', 'ether'));
 		assert.equal(offer._price, web3.utils.toWei('1', 'ether'));
