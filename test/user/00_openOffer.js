@@ -82,9 +82,7 @@ contract('SocialBet', (accounts) => {
 
 		oldNbOffers = await instance.m_nbOffers.call();
 
-		userBalance = await instance.balances.call(user);
-
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 1);
+		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
 
 		await instance.openOffer(nbEvents, web3.utils.toWei('1', 'ether'), web3.utils.toWei('1', 'ether'), 1, {from: user});
 

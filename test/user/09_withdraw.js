@@ -35,6 +35,11 @@ contract('SocialBet', (accounts) => {
 
 		userBalance = await instance.balances.call(user);
 
+		if(parseInt(userBalance) > 0)
+			await instance.withdraw(parseInt(userBalance), {from: user});
+
+		userBalance = await instance.balances.call(user);
+
 		assert.equal(userBalance, 0);
 
 		await exceptions.catchRevert(instance.withdraw(web3.utils.toWei('1', 'ether'), {from: user}));
