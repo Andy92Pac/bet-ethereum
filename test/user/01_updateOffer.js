@@ -36,7 +36,7 @@ contract('SocialBet', (accounts) => {
 
 		var typeArr = [0];
 		var ipfsHashArr = ["QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4"];
-		var timestamp = parseInt((new Date()).getTime() / 1000) + 300;
+		var timestamp = parseInt((new Date()).getTime() / 1000) + 300000;
 		var timestampStartArr = [timestamp];
 
 		var bytes32Arr = ipfsHashArr.map((e) => { return utils.getBytes32FromIpfsHash(e); });
@@ -92,6 +92,24 @@ contract('SocialBet', (accounts) => {
 
 	});
 
+	it("should update offer", async () => {
+
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
+
+		await instance.updateOffer(nbOffers, web3.utils.toWei('1.5', 'ether'), {from: user});
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._state.toString(), 0);
+		assert.equal(offer._amount, web3.utils.toWei('1', 'ether'));
+		assert.equal(offer._price, web3.utils.toWei('1.5', 'ether'));
+
+	});
+
 	it("should abort because event is close", async () => {
 
 		nbOffers = await instance.m_nbOffers.call();
@@ -130,24 +148,6 @@ contract('SocialBet', (accounts) => {
 		await exceptions.catchRevert(instance.updateOffer(nbOffers, web3.utils.toWei('1.5', 'ether'), {from: user}));
 
 		await utils.revert(snapshotId);
-	});
-
-	it("should update offer", async () => {
-
-		nbOffers = await instance.m_nbOffers.call();
-
-		offer = await instance.offers.call(nbOffers);
-
-		assert.equal(offer._owner, user);
-
-		await instance.updateOffer(nbOffers, web3.utils.toWei('1.5', 'ether'), {from: user});
-
-		offer = await instance.offers.call(nbOffers);
-
-		assert.equal(offer._state.toString(), 0);
-		assert.equal(offer._amount, web3.utils.toWei('1', 'ether'));
-		assert.equal(offer._price, web3.utils.toWei('1.5', 'ether'));
-
 	});
 
 })
