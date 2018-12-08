@@ -75,7 +75,7 @@ contract('SocialBet', (accounts) => {
 
 		assert.equal(parseInt(nbOffers), parseInt(oldNbOffers));
 	});
-*/
+
 	it("should open offer", async () => {
 
 		var snapshotId = (await utils.snapshot()).result;
@@ -106,7 +106,7 @@ contract('SocialBet', (accounts) => {
 
 		await utils.revert(snapshotId);
 	});
-
+*/
 	it("should abort because event is not available", async () => {
 
 		var snapshotId = (await utils.snapshot()).result;
