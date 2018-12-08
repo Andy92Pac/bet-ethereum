@@ -92,7 +92,6 @@ contract('SocialBet', (accounts) => {
 
 		offer = await instance.offers.call(nbOffers);
 
-		assert.equal(offer._state.toString(), 0);
 		assert.equal(offer._amount, 0);
 		assert.equal(offer._price, 0);
 		assert.equal(offer._state, 1);
