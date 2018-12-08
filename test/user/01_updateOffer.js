@@ -70,17 +70,35 @@ contract('SocialBet', (accounts) => {
 
 	it("should abort because new price is too low", async () => {
 
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
+
 		await exceptions.catchRevert(instance.updateOffer(nbOffers, web3.utils.toWei('0.0001', 'ether'), {from: user}));
 
 	});
 
 	it("should abort because offer doesn't belong to sender", async () => {
 
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
+
 		await exceptions.catchRevert(instance.updateOffer(nbOffers, web3.utils.toWei('1.5', 'ether'), {from: admin}));
 
 	});
 
 	it("should abort because event is close", async () => {
+
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
 
 		var snapshotId = (await utils.snapshot()).result;
 
@@ -92,6 +110,12 @@ contract('SocialBet', (accounts) => {
 	});
 
 	it("should abort because offer is close", async () => {
+
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
 
 		var snapshotId = (await utils.snapshot()).result;
 
@@ -109,6 +133,12 @@ contract('SocialBet', (accounts) => {
 	});
 
 	it("should update offer", async () => {
+
+		nbOffers = await instance.m_nbOffers.call();
+
+		offer = await instance.offers.call(nbOffers);
+
+		assert.equal(offer._owner, user);
 
 		await instance.updateOffer(nbOffers, web3.utils.toWei('1.5', 'ether'), {from: user});
 
