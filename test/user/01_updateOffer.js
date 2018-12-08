@@ -66,10 +66,6 @@ contract('SocialBet', (accounts) => {
 		assert.equal(offer._price, web3.utils.toWei('1', 'ether'));
 		assert.equal(offer._pick, 1);
 		assert.equal(offer._state, 0);
-
-		userBalance = await instance.balances.call(user);
-
-		assert.equal(web3.utils.fromWei(userBalance.toString(), 'ether'), 0);
 	});
 
 	it("should abort because new price is too low", async () => {
