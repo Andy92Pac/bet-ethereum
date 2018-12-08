@@ -31,21 +31,6 @@ contract('SocialBet', (accounts) => {
 		assert.equal(userBalance, 0);
 	});
 
-	it("should revert because of the empty balance", async () => {
-
-		userBalance = await instance.balances.call(user);
-
-		userBalance = await instance.balances.call(user);
-
-		assert.equal(userBalance, 0);
-
-		await exceptions.catchRevert(instance.withdraw(web3.utils.toWei('1', 'ether'), {from: user}));
-
-		userBalance = await instance.balances.call(user);
-
-		assert.equal(userBalance, 0);
-	});
-
 	it("should revert because try to withdraw too much", async () => {
 
 		await instance.deposit({from: user, value: web3.utils.toWei('1', 'ether')});
