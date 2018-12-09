@@ -137,6 +137,15 @@ contract SocialBet {
 		_;
 	}
 
+	modifier positionAvailable (uint _positionId) {
+		require (_positionId > 0);
+		require (_positionId <= m_nbPositions);
+		require (events[bets[positions[_positionId]._betId]._eventId]._timestampStart > now);
+		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) == uint(State.OPEN));
+		require (positions[_positionId]._amount >= m_minAmount);
+		_;
+	}
+
 	/// @dev Check that the selected pick is valid for the type of the selected event (DRAW is not possible for a HOMEAWAY event)
 	modifier pickValid (uint _eventId, uint _pick) {
 		if(events[_eventId]._type == Type.HOMEAWAY) {
@@ -359,14 +368,10 @@ contract SocialBet {
 	/// @notice Update the price of an existing position
 	/// @param _positionId Id of the position to update
 	/// @param _price Price the user wants to update the position to
-	function updatePosition (uint _positionId, uint _price) external {
+	function updatePosition (uint _positionId, uint _price) external positionAvailable(_positionId) {
 
-		require (_positionId <= m_nbPositions);
-		require (_price >= m_minAmount);
-		require (events[bets[positions[_positionId]._betId]._eventId]._timestampStart > now);
-		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) == uint(State.OPEN));
 		require (positions[_positionId]._owner == msg.sender);
-		require (positions[_positionId]._amount >= m_minAmount);
+		require (_price >= m_minAmount);
 
 		Position memory _position = positions[_positionId];
 
@@ -380,16 +385,11 @@ contract SocialBet {
 	/// @notice Fully or partly buy a position and create a new position in the associated bet
 	/// @param _positionId Id of the position the user wants to buy
 	/// @param _amount Amount the user wants to buy the position with
-	function buyPosition(uint _positionId, uint _amount) external {
+	function buyPosition(uint _positionId, uint _amount) external positionAvailable(_positionId) {
 
+		require (positions[_positionId]._price >= m_minAmount);
+		require (_amount >= m_minAmount);
 		require (balances[msg.sender] >= _amount);
-		require (_positionId <= m_nbPositions);
-		require (_amount > m_minAmount);
-		require (positions[_positionId]._price > m_minAmount);
-		require (events[bets[positions[_positionId]._betId]._eventId]._timestampStart < now);
-		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) == uint(State.OPEN));
-		require (positions[_positionId]._owner == msg.sender);
-		require (positions[_positionId]._amount > m_minAmount);
 
 		Position memory _position = positions[_positionId];
 		Bet memory _bet = bets[_position._betId];
