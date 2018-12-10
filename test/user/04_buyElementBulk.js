@@ -95,7 +95,7 @@ contract('SocialBet', (accounts) => {
 
 		oldBalance = parseInt((await instance.balances.call(user)).toString());
 
-		await instance.buyOfferBulk([nbOffers, nbOffers-1], web3.utils.toWei('1.5', 'ether'), {from: user});
+		await instance.buyElementBulk([nbOffers, nbOffers-1], [0, 0], web3.utils.toWei('1.5', 'ether'), {from: user});
 
 		newBalance = parseInt((await instance.balances.call(user)).toString());
 

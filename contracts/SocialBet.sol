@@ -48,6 +48,8 @@ contract SocialBet {
 
 	enum Type { HOMEAWAYDRAW, HOMEAWAY }
 
+	enum Element { OFFER, POSITION }
+
 	enum Role { BOOKMAKER, BETTOR }
 
 
@@ -197,8 +199,8 @@ contract SocialBet {
 	/// @param _timestampStartArr Array of the start timestamp of the saved events
 	function addEventBulk (uint[] calldata _typeArr, bytes32[] calldata _ipfsAddressArr, uint[] calldata _timestampStartArr) external isAdmin {
 
-		require(_typeArr.length == _ipfsAddressArr.length);
-		require(_typeArr.length == _timestampStartArr.length);
+		require (_typeArr.length == _ipfsAddressArr.length);
+		require (_typeArr.length == _timestampStartArr.length);
 
 		uint _length = _typeArr.length;
 
@@ -216,7 +218,7 @@ contract SocialBet {
 	/// @param _resultArr Array of the results to set
 	function setEventResultBulk (uint[] calldata _eventIdArr, uint[] calldata _resultArr) external isAdmin {
 
-		require(_eventIdArr.length == _resultArr.length);
+		require (_eventIdArr.length == _resultArr.length);
 
 		uint _length = _eventIdArr.length;
 
@@ -280,6 +282,23 @@ contract SocialBet {
 		emit LogUpdateOffer(offers[_offerId]._id, offers[_offerId]._owner, offers[_offerId]._amount, offers[_offerId]._price);
 	}
 
+	/// @notice Update the price of an existing position
+	/// @param _positionId Id of the position to update
+	/// @param _price Price the user wants to update the position to
+	function updatePosition (uint _positionId, uint _price) external positionAvailable(_positionId) {
+
+		require (positions[_positionId]._owner == msg.sender);
+		require (_price >= m_minAmount);
+
+		Position memory _position = positions[_positionId];
+
+		_position._price = _price;
+
+		positions[_position._id] = _position;
+
+		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price);
+	}
+
 	/// @notice Close an existing offer
 	/// @param _offerId Id of the offer to close
 	function closeOffer (uint _offerId) external offerAvailable(_offerId) {
@@ -331,61 +350,10 @@ contract SocialBet {
 		}
 	}
 
-	/// @notice Fully or partly buy multiple offers and open bets according to the parameters
-	/// @param _offerIds Ids of the offers to buy
-	/// @param _amount Amount the bettor wants to buy the offers with
-	function buyOfferBulk (uint[] calldata _offerIds, uint _amount) external {
-
-		require (_amount >= m_minAmount);
-		require (balances[msg.sender] >= _amount);
-
-		uint _length = _offerIds.length;
-		uint _restAmount = _amount;
-		uint _offerAmount;
-		uint _offerId;
-
-		for (uint i=0; i<_length; i++) {
-
-			if ( _restAmount < m_minAmount ) {
-				break;
-			}
-
-			_offerId = _offerIds[i];
-
-			if( offers[_offerId]._price <= _restAmount ) {
-				_offerAmount = offers[_offerId]._price;
-			}
-			else {
-				_offerAmount = _restAmount;
-			}
-
-			buyOffer(_offerId, _offerAmount);
-
-			_restAmount = sub(_restAmount, _offerAmount);
-		}
-	}
-
-	/// @notice Update the price of an existing position
-	/// @param _positionId Id of the position to update
-	/// @param _price Price the user wants to update the position to
-	function updatePosition (uint _positionId, uint _price) external positionAvailable(_positionId) {
-
-		require (positions[_positionId]._owner == msg.sender);
-		require (_price >= m_minAmount);
-
-		Position memory _position = positions[_positionId];
-
-		_position._price = _price;
-
-		positions[_position._id] = _position;
-
-		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price);
-	}
-
 	/// @notice Fully or partly buy a position and create a new position in the associated bet
 	/// @param _positionId Id of the position the user wants to buy
 	/// @param _amount Amount the user wants to buy the position with
-	function buyPosition(uint _positionId, uint _amount) external positionAvailable(_positionId) {
+	function buyPosition(uint _positionId, uint _amount) public positionAvailable(_positionId) {
 
 		require (positions[_positionId]._price >= m_minAmount);
 		require (_amount >= m_minAmount);
@@ -415,6 +383,57 @@ contract SocialBet {
 		_addBalance(_position._owner, sub(_amount, _fees));
 
 		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price);		
+	}
+
+	/// @notice Fully or partly buy multiple offers and open bets according to the parameters
+	/// @param _elementIdArr Array of the id of the elements to buy
+	/// @param _elementTypeArr Array of the type of the elements to buy
+	/// @param _amount Amount the bettor wants to buy the offers with
+	function buyElementBulk (uint[] calldata _elementIdArr, uint[] calldata _elementTypeArr, uint _amount) external {
+
+		require (_elementIdArr.length == _elementTypeArr.length);
+		require (_amount >= m_minAmount);
+		require (balances[msg.sender] >= _amount);
+
+		uint _length = _elementIdArr.length;
+		uint _restAmount = _amount;
+		uint _elementAmount;
+		uint _elementId;
+
+		for (uint i=0; i<_length; i++) {
+
+			if ( _restAmount < m_minAmount ) {
+				break;
+			}
+
+			_elementId = _elementIdArr[i];
+
+			if( _elementTypeArr[i] == uint(Element.OFFER) ) {
+				if( offers[_elementId]._price <= _restAmount ) {
+					_elementAmount = offers[_elementId]._price;
+				}
+				else {
+					_elementAmount = _restAmount;
+				}
+
+				buyOffer(_elementId, _elementAmount);
+			}
+			else if( _elementTypeArr[i] == uint(Element.POSITION) ) {
+				if( positions[_elementId]._price <= _restAmount ) {
+					_elementAmount = positions[_elementId]._price;
+				}
+				else {
+					_elementAmount = _restAmount;
+				}
+
+				buyPosition(_elementId, _elementAmount);
+			}
+			else {
+				revert("Invalid element to buy, neither offer or position");
+			}
+
+			_restAmount = sub(_restAmount, _elementAmount);
+		}
 	}
 
 	/// @notice Claim bet earnings of a bet open on a close event
