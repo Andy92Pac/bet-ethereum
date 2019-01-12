@@ -64,7 +64,7 @@ contract SocialBet {
 	event LogOfferClosed (uint id, address indexed owner);
 	event LogNewBet (uint id, uint indexed eventId, uint[] positions, uint pick);
 	event LogBetClosed (uint id);
-	event LogNewPosition (uint id, uint indexed betId, uint indexed eventId, address indexed owner, uint amount, uint amountToEarn, uint price, uint role);
+	event LogNewPosition (uint id, uint indexed betId, uint indexed eventId, address indexed owner, uint amount, uint amountToEarn, uint price, uint role, uint pick);
 	event LogUpdatePosition (uint id, address indexed owner, uint amount, uint amountToEarn, uint price, uint role);
 
 
@@ -299,7 +299,7 @@ contract SocialBet {
 	function updatePosition (uint _positionId, uint _price) external positionAvailable(_positionId) {
 
 		require (positions[_positionId]._owner == msg.sender);
-		require (_price >= m_minAmount);
+		require (_price >= m_minAmount || _price == 0);
 
 		Position memory _position = positions[_positionId];
 
@@ -661,10 +661,12 @@ contract SocialBet {
 
 		positions[newPosition._id] = newPosition;
 
-		emit LogNewPosition(newPosition._id, newPosition._betId, newPosition._eventId, newPosition._owner, newPosition._amount, newPosition._amountToEarn, newPosition._price, uint(newPosition._role));
+		_logNewPosition(newPosition, uint(bets[_betId]._pick));
 	}
 
-
+	function _logNewPosition (Position memory newPosition, uint pick) private {
+		emit LogNewPosition(newPosition._id, newPosition._betId, newPosition._eventId, newPosition._owner, newPosition._amount, newPosition._amountToEarn, newPosition._price, uint(newPosition._role), pick);
+	}
 
 	function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
 		assert(_b <= _a);
