@@ -31,13 +31,7 @@ contract SocialBet {
 	/// @notice Number of positions, used to set id of created positions
 	uint public m_nbPositions;
 
-	/// @notice Fees balance
-	uint public m_feeBalance = 0;
 
-	/// @notice Fees applied to trade action
-	uint public m_tradeFee = 1;
-	/// @notice Fees applied to claim action
-	uint public m_publicFee = 2;
 	/// @notice Minimum ammount to maintain an Offer or a Position open to sell
 	uint public m_minAmount = 10000000000000000;
 
@@ -53,8 +47,6 @@ contract SocialBet {
 	enum Role { BOOKMAKER, BETTOR }
 
 
-	event LogDeposit (address indexed account, uint amount);
-	event LogWithdraw (address indexed account, uint amount);
 	event LogBalanceChange (address indexed account, uint oldBalance, uint newBalance);
 	event LogNewEvents (uint[] id, bytes32[] ipfsAddress);
 	event LogResultsEvent (uint[] id, uint[] result);
@@ -195,13 +187,6 @@ contract SocialBet {
 	function removeAdmin (address _addr) external isOwner {
 		require (_addr != owner);
 		admins[_addr] = false;
-	}
-
-	/// @notice Send the amount of fees collected to the owner address 
-	function claimFees () external isOwner {
-		uint _amount = m_feeBalance;
-		m_feeBalance = 0;
-		owner.transfer(_amount);
 	}
 
 	/// @notice Bulk add new events to smart contract. The details of the event are found in the ipfs address passed 
@@ -387,12 +372,8 @@ contract SocialBet {
 
 		bets[_bet._id]._positions.push(p._id);
 
-		uint _fees = div(mul(_amount, m_tradeFee), 100);
-
-		m_feeBalance = add(m_feeBalance, _fees);
-
 		_subBalance(msg.sender, _amount);
-		_addBalance(_position._owner, sub(_amount, _fees));
+		_addBalance(_position._owner, _amount);
 
 		emit LogUpdatePosition(_position._id, _position._owner, _position._amount, _position._amountToEarn, _position._price, uint(_position._role));		
 	}
@@ -473,13 +454,7 @@ contract SocialBet {
 				_position = positions[_bet._positions[i]];
 
 				if( (_bet._pick == _event._result && _position._role == Role.BETTOR ) || ( _bet._pick != _event._result && _position._role == Role.BOOKMAKER ) ) {
-
-					uint _fees = div(mul(_position._amountToEarn, m_publicFee), 100);
-					uint _earnings = sub(_position._amountToEarn, _fees);
-
-					m_feeBalance = add(m_feeBalance, _fees);
-
-					_addBalance(_position._owner, _earnings);
+					_addBalance(_position._owner, _position._amountToEarn);
 				}
 			}
 		}
@@ -497,32 +472,6 @@ contract SocialBet {
 
 		emit LogBetClosed(_bet._id);
 	}
-
-	/// @notice Deposit 
-	function deposit () payable external {
-
-		require(msg.value > 0);
-
-		_addBalance(msg.sender, msg.value);
-
-		emit LogDeposit(msg.sender, msg.value);
-	}
-
-	/// @notice Withdraw
-	/// @param _amount Amount to withdraw from user balance in smart contract to his account
-	function withdraw (uint _amount) external {
-		
-		require(_amount > 0);
-
-		_subBalance(msg.sender, _amount);
-
-		msg.sender.transfer(_amount);
-
-		emit LogWithdraw(msg.sender, _amount);
-	}
-
-
-
 
 
 	/// @notice Add the amount to the balance of the address passed in the arguments
