@@ -3,7 +3,7 @@ pragma solidity ^0.5.1;
 /// @title SocialBet
 /// @notice
 /// @dev
-contract SocialBet {
+contract SocialBetContest {
 
 	/// @notice Owner of SocialBet smart contract 
 	address payable public owner;
@@ -34,6 +34,11 @@ contract SocialBet {
 
 	/// @notice Minimum ammount to maintain an Offer or a Position open to sell
 	uint public m_minAmount = 10000000000000000;
+
+	/// @notice Timestamp of the contest starting date
+	uint public START_CONTEST_DATE = 1551398400;
+	/// @notice Timestamp of the contest ending date
+	uint public END_CONTEST_DATE = 1554076800;
 
 
 	enum State { OPEN, CLOSE, CANCELED }
@@ -132,6 +137,7 @@ contract SocialBet {
 		_;
 	}
 
+	/// @dev Check that the position exists and is still open 
 	modifier positionAvailable (uint _positionId) {
 		require (_positionId > 0);
 		require (_positionId <= m_nbPositions);
@@ -153,15 +159,25 @@ contract SocialBet {
 		_;
 	}
 
+	/// @dev Check that the odds of the offer are the same as it was when the user selected the offer
 	modifier checkOddsOffer (uint _offerId, uint _odds) {
 		require( div(mul(add(offers[_offerId]._amount, offers[_offerId]._price), 100), offers[_offerId]._price) == _odds, "Odds different from arguments");
 		_;
 	}
 	
+	/// @dev Check that the odds of the position are the same as it was when the user selected the position
 	modifier checkOddsPosition (uint _positionId, uint _odds) {
 		require( div(mul(positions[_positionId]._amountToEarn, 100), positions[_positionId]._price) == _odds, "Odds different from arguments");
 		_;
 	}
+
+	/// @dev Check that the contest is currently open
+	modifier contestOpen () {
+		require (now >= START_CONTEST_DATE);
+		require (now <= END_CONTEST_DATE);
+		_;
+	}
+	
 
 	/** 
 	@notice Create SocialBet smart contract
@@ -242,13 +258,19 @@ contract SocialBet {
 		emit LogCancelEvent(_arr);
 	}
 
+	/// @notice Add a specific amount to the balance of the specified address
+	/// @param _addr Address to add the amount to
+	/// @param _amount Amount to add to the balance
+	function addToBalance (address _addr, uint _amount) external isAdmin {
+		_addBalance(_addr, _amount);
+	}
 
 	/// @notice Open a new offer on the selected event with the parameters passed as arguments
 	/// @param _eventId Id of the event the offer is created on
 	/// @param _amount Amount the bookmaker is putting on the offer
 	/// @param _price Price the bookmaker is selling the offer for
 	/// @param _pick Pick of the event the bookmaker is opening the offer on
-	function openOffer (uint _eventId, uint _amount, uint _price, uint _pick) external eventAvailable(_eventId) pickValid(_eventId, _pick) {
+	function openOffer (uint _eventId, uint _amount, uint _price, uint _pick) external contestOpen eventAvailable(_eventId) pickValid(_eventId, _pick) {
 
 		require (_price >= m_minAmount);
 		require (_amount >= m_minAmount);
@@ -268,7 +290,7 @@ contract SocialBet {
 	/// @notice Update the price of an existing offer
 	/// @param _offerId Id of the offer to update
 	/// @param _price Price the bookmaker wants to update the offer to
-	function updateOffer (uint _offerId, uint _price) external offerAvailable(_offerId) {
+	function updateOffer (uint _offerId, uint _price) external contestOpen offerAvailable(_offerId) {
 
 		require (offers[_offerId]._owner == msg.sender);
 		require (_price >= m_minAmount);
@@ -281,7 +303,7 @@ contract SocialBet {
 	/// @notice Update the price of an existing position
 	/// @param _positionId Id of the position to update
 	/// @param _price Price the user wants to update the position to
-	function updatePosition (uint _positionId, uint _price) external positionAvailable(_positionId) {
+	function updatePosition (uint _positionId, uint _price) external contestOpen positionAvailable(_positionId) {
 
 		require (positions[_positionId]._owner == msg.sender);
 		require (_price >= m_minAmount || _price == 0);
@@ -310,7 +332,7 @@ contract SocialBet {
 	/// @notice Fully or partly buy an offer and open a bet according to the parameters
 	/// @param _offerId Id of the offer to buy
 	/// @param _amount Amount the bettor wants to buy the offer with
-	function buyOffer (uint _offerId, uint _amount, uint _odds) public offerAvailable(_offerId) checkOddsOffer(_offerId, _odds) {
+	function buyOffer (uint _offerId, uint _amount, uint _odds) public contestOpen offerAvailable(_offerId) checkOddsOffer(_offerId, _odds) {
 
 		require (_amount >= m_minAmount);
 		require (balances[msg.sender] >= _amount);
@@ -350,7 +372,7 @@ contract SocialBet {
 	/// @notice Fully or partly buy a position and create a new position in the associated bet
 	/// @param _positionId Id of the position the user wants to buy
 	/// @param _amount Amount the user wants to buy the position with
-	function buyPosition(uint _positionId, uint _amount, uint _odds) public positionAvailable(_positionId) checkOddsPosition(_positionId, _odds) {
+	function buyPosition(uint _positionId, uint _amount, uint _odds) public contestOpen positionAvailable(_positionId) checkOddsPosition(_positionId, _odds) {
 
 		require (positions[_positionId]._price >= m_minAmount);
 		require (_amount >= m_minAmount);
@@ -508,7 +530,7 @@ contract SocialBet {
 
 		_id = 0;
 
-		if(_timestampStart > now) {
+		if(_timestampStart > now && _timestampStart >= START_CONTEST_DATE && _timestampStart <= END_CONTEST_DATE) {
 			if(_type <= uint(Type.HOMEAWAY)) {
 				m_nbEvents = add(m_nbEvents, 1);
 
