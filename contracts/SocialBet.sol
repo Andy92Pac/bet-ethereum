@@ -140,6 +140,7 @@ contract SocialBet {
 		_;
 	}
 
+	/// @dev Check that the position exists and is still open
 	modifier positionAvailable (uint _positionId) {
 		require (_positionId > 0);
 		require (_positionId <= m_nbPositions);
@@ -161,11 +162,13 @@ contract SocialBet {
 		_;
 	}
 
+	/// @dev Check that the odds of the offer are the same as it was when the user selected the offer
 	modifier checkOddsOffer (uint _offerId, uint _odds) {
 		require( div(mul(add(offers[_offerId]._amount, offers[_offerId]._price), 100), offers[_offerId]._price) == _odds, "Odds different from arguments");
 		_;
 	}
 	
+	/// @dev Check that the odds of the position are the same as it was when the user selected the position
 	modifier checkOddsPosition (uint _positionId, uint _odds) {
 		require( div(mul(positions[_positionId]._amountToEarn, 100), positions[_positionId]._price) == _odds, "Odds different from arguments");
 		_;
