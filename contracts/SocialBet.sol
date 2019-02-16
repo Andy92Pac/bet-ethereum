@@ -3,7 +3,7 @@ pragma solidity ^0.5.1;
 /// @title SocialBet
 /// @notice
 /// @dev
-contract SocialBetContest {
+contract SocialBet {
 
 	/// @notice Owner of SocialBet smart contract 
 	address payable public owner;
@@ -11,6 +11,10 @@ contract SocialBetContest {
 	/// @notice Administrators mapping 
 	mapping (address => bool) public admins;
 
+	/// @notice Added accounts mapping
+	mapping (address => bool) public accounts;
+	/// @notice Donation accounts mapping
+	mapping (address => uint) public donations;
 	/// @notice Users balance mapping
 	mapping (address => uint) public balances;
 	/// @notice Events mapping
@@ -40,6 +44,10 @@ contract SocialBetContest {
 	/// @notice Timestamp of the contest ending date
 	uint public END_CONTEST_DATE = 1554076800;
 
+	/// @notice Starting amount for the contest
+	uint public STARTING_CONTEST_AMOUNT = 5000000000000000000;
+	/// @notice Maximum donation amount for the cntest
+	uint public MAXIMUM_DONATION_CONTEST_AMOUNT = 5000000000000000000;
 
 	enum State { OPEN, CLOSE, CANCELED }
 
@@ -63,7 +71,8 @@ contract SocialBetContest {
 	event LogBetClosed (uint id);
 	event LogNewPosition (uint id, uint indexed betId, uint indexed eventId, address indexed owner, uint amount, uint amountToEarn, uint price, uint role, uint pick);
 	event LogUpdatePosition (uint id, address indexed owner, uint amount, uint amountToEarn, uint price, uint role);
-
+	event LogAccountAdded (address account);
+	event LogDonationAdded (address account, uint donation);
 
 	struct Event {
 		uint 		_id;
@@ -258,11 +267,41 @@ contract SocialBetContest {
 		emit LogCancelEvent(_arr);
 	}
 
+	/// @notice Add the specified address to the contest and deposit 5 ETH to the balance 
+	/// @param _addr Address to add 
+	function addAccount (address _addr) external isAdmin {
+
+		require (!accounts[_addr]);
+		
+		_addBalance(_addr, STARTING_CONTEST_AMOUNT);
+
+		accounts[_addr] = true;
+
+		emit LogAccountAdded(_addr);
+	}
+
 	/// @notice Add a specific amount to the balance of the specified address
 	/// @param _addr Address to add the amount to
 	/// @param _amount Amount to add to the balance
-	function addToBalance (address _addr, uint _amount) external isAdmin {
-		_addBalance(_addr, _amount);
+	function addDonation (address _addr, uint _amount) external isAdmin {
+
+		require (donations[_addr] < MAXIMUM_DONATION_CONTEST_AMOUNT);
+
+		uint _curDonation = donations[_addr];
+		uint _amountToAdd;
+
+		if ( add(_amount, _curDonation) > MAXIMUM_DONATION_CONTEST_AMOUNT ) {
+			_amountToAdd = sub(MAXIMUM_DONATION_CONTEST_AMOUNT, _curDonation);
+		}
+		else {
+			_amountToAdd = _amount;
+		}
+
+		donations[_addr] = add(_curDonation, _amountToAdd);
+		
+		_addBalance(_addr, _amountToAdd);
+
+		emit LogDonationAdded(_addr, _amountToAdd);
 	}
 
 	/// @notice Open a new offer on the selected event with the parameters passed as arguments
@@ -530,7 +569,7 @@ contract SocialBetContest {
 
 		_id = 0;
 
-		if(_timestampStart > now && _timestampStart >= START_CONTEST_DATE && _timestampStart <= END_CONTEST_DATE) {
+		if(_timestampStart > now && /*_timestampStart >= START_CONTEST_DATE &&*/ _timestampStart <= END_CONTEST_DATE) {
 			if(_type <= uint(Type.HOMEAWAY)) {
 				m_nbEvents = add(m_nbEvents, 1);
 
