@@ -15,6 +15,8 @@ contract SocialBet {
 	mapping (address => bool) public accounts;
 	/// @notice Donation accounts mapping
 	mapping (address => uint) public donations;
+	/// @notice Donation Id mapping
+	mapping (uint => bool) public donationsId;
 	/// @notice Users balance mapping
 	mapping (address => uint) public balances;
 	/// @notice Events mapping
@@ -72,7 +74,7 @@ contract SocialBet {
 	event LogNewPosition (uint id, uint indexed betId, uint indexed eventId, address indexed owner, uint amount, uint amountToEarn, uint price, uint role, uint pick);
 	event LogUpdatePosition (uint id, address indexed owner, uint amount, uint amountToEarn, uint price, uint role);
 	event LogAccountAdded (address account);
-	event LogDonationAdded (address account, uint donation);
+	event LogDonationAdded (address account, uint donation, uint donationId);
 
 	struct Event {
 		uint 		_id;
@@ -283,9 +285,10 @@ contract SocialBet {
 	/// @notice Add a specific amount to the balance of the specified address
 	/// @param _addr Address to add the amount to
 	/// @param _amount Amount to add to the balance
-	function addDonation (address _addr, uint _amount) external isAdmin {
+	function addDonation (address _addr, uint _amount, uint _donationId) external isAdmin {
 
 		require (donations[_addr] < MAXIMUM_DONATION_CONTEST_AMOUNT);
+		require (donationsId[_donationId] == false);
 
 		uint _curDonation = donations[_addr];
 		uint _amountToAdd;
@@ -297,11 +300,13 @@ contract SocialBet {
 			_amountToAdd = _amount;
 		}
 
+		donationsId[_donationId] = true;
+
 		donations[_addr] = add(_curDonation, _amountToAdd);
 		
 		_addBalance(_addr, _amountToAdd);
 
-		emit LogDonationAdded(_addr, _amountToAdd);
+		emit LogDonationAdded(_addr, _amountToAdd, _donationId);
 	}
 
 	/// @notice Open a new offer on the selected event with the parameters passed as arguments
