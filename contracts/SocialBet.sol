@@ -42,9 +42,9 @@ contract SocialBet {
 	uint public m_minAmount = 10000000000000000;
 
 	/// @notice Timestamp of the contest starting date
-	uint public START_CONTEST_DATE = 1551398400;
+	uint public START_CONTEST_DATE = 1553472000;
 	/// @notice Timestamp of the contest ending date
-	uint public END_CONTEST_DATE = 1554076800;
+	uint public END_CONTEST_DATE = 1556150400;
 
 	/// @notice Starting amount for the contest
 	uint public STARTING_CONTEST_AMOUNT = 5000000000000000000;
