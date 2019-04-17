@@ -1,4 +1,4 @@
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.5.0;
 
 /// @title SocialBet
 /// @notice
@@ -70,10 +70,10 @@ contract SocialBet {
 	event LogDeposit (address indexed account, uint amount);
 	event LogWithdraw (address indexed account, uint amount);
 	event LogBalanceChange (address indexed account, uint oldBalance, uint newBalance);
-	event LogNewEvents (uint[] ids, bytes32[] ipfsAddress);
-	event LogNewMarkets (uint[] ids);
-	event LogResultEvents (uint[] ids);
-	event LogCancelEvents (uint[] ids);
+	event LogNewEvent (uint id, bytes32 ipfsAddress);
+	event LogNewMarkets (uint id);
+	event LogResultEvent (uint id);
+	event LogCancelEvent (uint id);
 	event LogNewOffer (uint id, uint indexed eventId, uint indexed marketIndex, address indexed owner, uint amount, uint price, uint outcome, uint offerType);
 	event LogUpdateOffer (uint indexed id, uint amount, uint price);
 	event LogOfferClosed (uint id);
@@ -85,7 +85,8 @@ contract SocialBet {
 		uint 		_id;
 		bytes32 	_ipfsAddress;
 		uint 		_timestampStart;
-		Market[]	_markets;
+		mapping(uint => Market)	_markets;
+		uint 		_marketsLength;
 		State 		_state;
 	}
 
@@ -148,7 +149,7 @@ contract SocialBet {
 
 	/// @dev Check that the market exists
 	modifier marketAvailable (uint _eventId, uint _marketIndex) {
-		require (events[_eventId]._markets.length > _marketIndex);
+		require (events[_eventId]._marketsLength > _marketIndex);
 		_;
 	}
 
@@ -236,53 +237,34 @@ contract SocialBet {
 	}
 
 	/// @notice Bulk add new events to smart contract. The details of the event are found in the ipfs address passed 
-	/// @param _ipfsAddressArr Array of the hash of the JSONs containing details of the saved events
-	/// @param _timestampStartArr Array of the start timestamp of the saved events
-	function addEventBulk (bytes32[] calldata _ipfsAddressArr, uint[] calldata _timestampStartArr, uint[][] calldata _marketsArr, bytes5[][] calldata _dataArr) external isAdmin {
+	function addEvent (bytes32 _ipfsAddress, uint _timestampStart, uint[] calldata _markets, bytes5[] calldata _data) external isAdmin {
 
-		uint _length = _ipfsAddressArr.length;
+		uint _id = _addEvent(_ipfsAddress, _timestampStart, _markets, _data);
 
-		uint[] memory _ids = new uint[](_length);
-
-		for(uint i=0; i<_length; i++) {
-			_ids[i] = _addEvent(_ipfsAddressArr[i], _timestampStartArr[i], _marketsArr[i], _dataArr[i]);
-		}
-
-		emit LogNewEvents(_ids, _ipfsAddressArr);
+		emit LogNewEvent(_id, _ipfsAddress);
 	}
 
-	function addMarkets (uint[] calldata _eventIdArr, uint[][] calldata _marketsArr, bytes5[][] calldata _dataArr) external isAdmin {
+	function addMarkets (uint _eventId, uint[] calldata _markets, bytes5[] calldata _data) external isAdmin {
 
-		for(uint i=0; i>_eventIdArr.length; i++) {
-			for (uint j=0; j<_marketsArr[i].length; j++) {
-				events[_eventIdArr[i]]._markets.push(Market(BetType(_marketsArr[i][j]), _dataArr[i][j], Outcome.NULL));
-			}
-		}
+		_addMarkets(_eventId, _markets, _data);
 		
-		emit LogNewMarkets(_eventIdArr);
+		emit LogNewMarkets(_eventId);
 	}
 
 	/// @notice Bulk set events result 
-	/// @param _eventIdArr Array of the id of the events to set result to
-	/// @param _resultArr Array of the results to set
-	function setEventResultBulk (uint[] calldata _eventIdArr, uint[][] calldata _resultArr) external isAdmin {
+	function setEventResult (uint _eventId, uint[] calldata _outcomeArr) external isAdmin {
 
-		for (uint i=0; i<_eventIdArr.length; i++) {
-			_setEventResult(_eventIdArr[i], _resultArr[i]);
-		}
+		_setEventResult(_eventId, _outcomeArr);
 
-		emit LogResultEvents(_eventIdArr);
+		emit LogResultEvent(_eventId);
 	}
 
 	/// @notice Bulk cancel of events
-	/// @param _eventIdArr Array of the id of the events to cancel
-	function cancelEventBulk (uint[] calldata _eventIdArr) external isAdmin {
+	function cancelEvent (uint _eventId) external isAdmin {
 
-		for (uint i=0; i<_eventIdArr.length; i++) {
-			_cancelEvent(_eventIdArr[i]);
-		}
+		_cancelEvent(_eventId);
 
-		emit LogCancelEvents(_eventIdArr);
+		emit LogCancelEvent(_eventId);
 	}
 
 	/// @notice Open a new offer on the selected event with the parameters passed as arguments
@@ -434,7 +416,7 @@ contract SocialBet {
 		require (uint(events[bets[positions[_positionId]._betId]._eventId]._state) > uint(State.OPEN));
 
 		Bet memory _bet = bets[positions[_positionId]._betId];
-		Event memory _event = events[_bet._eventId];
+		Event storage _event = events[_bet._eventId];
 
 		if(uint(_event._state) == uint(State.CANCELED)) {
 			_addBalance(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
@@ -512,16 +494,30 @@ contract SocialBet {
 
 		m_nbEvents = add(m_nbEvents, 1);
 
-		Event memory newEvent = Event(m_nbEvents, _ipfsAddress, _timestampStart, new Market[](0), State.OPEN);
+		Event memory newEvent;
+		newEvent._id = m_nbEvents;
+		newEvent._ipfsAddress = _ipfsAddress;
+		newEvent._timestampStart = _timestampStart;
+		newEvent._state = State.OPEN;
 
 		events[newEvent._id] = newEvent;
 
-		for (uint i=0; i<_markets.length; i++) {
-			events[newEvent._id]._markets.push(Market(BetType(_markets[i]), _data[i], Outcome.NULL));
-		}
+		_addMarkets(newEvent._id, _markets, _data);
 
 		_id = m_nbEvents;
 	}
+
+	function _addMarkets (uint _eventId, uint[] memory _markets, bytes5[] memory _data) internal {
+
+		uint _curMarketsLength = events[_eventId]._marketsLength;
+		uint _marketsCursor;
+
+		for (uint i=0; i<_markets.length; i++) {
+			_marketsCursor = _curMarketsLength + i;
+			events[_eventId]._markets[_marketsCursor] = (Market(BetType(_markets[i]), _data[i], Outcome.NULL));
+			events[_eventId]._marketsLength++;
+		}
+	}	
 
 	/// @notice Cancel event
 	/// @param _eventId Id of the event
@@ -539,17 +535,15 @@ contract SocialBet {
 	/// @param _result Result of the event
 	function _setEventResult (uint _eventId, uint[] memory _result) private {
 
-		Event memory _event = events[_eventId];
+		Event storage _event = events[_eventId];
 
 		if( uint(_event._state) != uint(State.CLOSE) ) {
 
-			for (uint i=0; i<_event._markets.length; i++) {
+			for (uint i=0; i<_event._marketsLength; i++) {
 				_event._markets[i]._outcome = Outcome(_result[i]);
 			}
 			_event._state = State.CLOSE;
 		}
-
-		events[_event._id] = _event;
 	}
 
 	/// @notice Close an existing offer
