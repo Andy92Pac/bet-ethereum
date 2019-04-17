@@ -25,5 +25,9 @@
     "ethereumjs-abi": "^0.6.5",
     "truffle": "^5.0.0-beta.2",
     "truffle-hdwallet-provider": "^1.0.0-web3one.1"
+  },
+  "devDependencies": {
+    "prettier": "^1.17.0",
+    "prettier-plugin-solidity": "^1.0.0-alpha.22"
   }
 }
