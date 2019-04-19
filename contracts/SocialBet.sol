@@ -48,8 +48,8 @@ contract SocialBet {
         uint oldBalance,
         uint newBalance
     );
-    event LogNewEvent(uint id, bytes32 ipfsAddress);
-    event LogNewMarkets(uint id);
+    event LogNewEvent(uint id, bytes32 ipfsAddress, uint[] markets);
+    event LogNewMarkets(uint id, uint[] markets);
     event LogResultEvent(uint id);
     event LogCancelEvent(uint id);
     event LogNewOffer(
@@ -87,14 +87,14 @@ contract SocialBet {
         bytes32 _ipfsAddress;
         uint _timestampStart;
         mapping(uint => Market) _markets;
-        uint _marketsLength;
         State _state;
     }
 
     struct Market {
         BetType _type;
-        bytes5 _data;
+        bytes10 _data;
         Outcome _outcome;
+        bool 	_active;
     }
 
     struct Offer {
@@ -150,7 +150,7 @@ contract SocialBet {
 
     /// @dev Check that the market exists
     modifier marketAvailable(uint _eventId, uint _marketIndex) {
-        require(events[_eventId]._marketsLength > _marketIndex);
+        require(events[_eventId]._markets[_marketIndex]._active);
         _;
     }
 
@@ -185,27 +185,27 @@ contract SocialBet {
 
     /// @dev Check that the selected outcome is valid for the type of the selected event (DRAW is not possible for a HOMEAWAY event)
     modifier outcomeValid(uint _eventId, uint _marketIndex, uint _outcome) {
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.HOMEAWAYDRAW) {
+        if (BetType(_marketIndex) == BetType.HOMEAWAYDRAW) {
             require(_outcome <= uint(Outcome.DRAW));
             require(_outcome >= uint(Outcome.HOME));
         }
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.MONEYLINE) {
+        if (BetType(_marketIndex) == BetType.MONEYLINE) {
             require(_outcome <= uint(Outcome.AWAY));
             require(_outcome >= uint(Outcome.HOME));
         }
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.OVERUNDER) {
+        if (BetType(_marketIndex) == BetType.OVERUNDER) {
             require(_outcome <= uint(Outcome.UNDER));
             require(_outcome >= uint(Outcome.OVER));
         }
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.POINTSPREAD) {
+        if (BetType(_marketIndex) == BetType.POINTSPREAD) {
             require(_outcome <= uint(Outcome.AWAY));
             require(_outcome >= uint(Outcome.HOME));
         }
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.BOTHTEAMSCORE) {
+        if (BetType(_marketIndex) == BetType.BOTHTEAMSCORE) {
             require(_outcome <= uint(Outcome.NO));
             require(_outcome >= uint(Outcome.YES));
         }
-        if (events[_eventId]._markets[_marketIndex]._type == BetType.FIRSTTEAMTOSCORE) {
+        if (BetType(_marketIndex) == BetType.FIRSTTEAMTOSCORE) {
             require(_outcome <= uint(Outcome.AWAY));
             require(_outcome >= uint(Outcome.HOME));
         }
@@ -258,29 +258,29 @@ contract SocialBet {
         bytes32 _ipfsAddress,
         uint _timestampStart,
         uint[] calldata _markets,
-        bytes5[] calldata _data
+        bytes10[] calldata _data
     ) external isAdmin {
         uint _id = _addEvent(_ipfsAddress, _timestampStart, _markets, _data);
 
-        emit LogNewEvent(_id, _ipfsAddress);
+        emit LogNewEvent(_id, _ipfsAddress, _markets);
     }
 
     function addMarkets(
         uint _eventId,
         uint[] calldata _markets,
-        bytes5[] calldata _data
+        bytes10[] calldata _data
     ) external isAdmin {
         _addMarkets(_eventId, _markets, _data);
 
-        emit LogNewMarkets(_eventId);
+        emit LogNewMarkets(_eventId, _markets);
     }
 
     /// @notice Bulk set events result
-    function setEventResult(uint _eventId, uint[] calldata _outcomeArr)
+    function setEventResult(uint _eventId, uint[] calldata _markets, uint[] calldata _outcomes)
         external
         isAdmin
     {
-        _setEventResult(_eventId, _outcomeArr);
+        _setEventResult(_eventId, _markets, _outcomes);
 
         emit LogResultEvent(_eventId);
     }
@@ -595,7 +595,7 @@ contract SocialBet {
         bytes32 _ipfsAddress,
         uint _timestampStart,
         uint[] memory _markets,
-        bytes5[] memory _data
+        bytes10[] memory _data
     ) internal returns (uint _id) {
         m_nbEvents = add(m_nbEvents, 1);
 
@@ -615,19 +615,15 @@ contract SocialBet {
     function _addMarkets(
         uint _eventId,
         uint[] memory _markets,
-        bytes5[] memory _data
+        bytes10[] memory _data
     ) internal {
-        uint _curMarketsLength = events[_eventId]._marketsLength;
-        uint _marketsCursor;
-
         for (uint i = 0; i < _markets.length; i++) {
-            _marketsCursor = _curMarketsLength + i;
-            events[_eventId]._markets[_marketsCursor] = (Market(
+            events[_eventId]._markets[_markets[i]] = (Market(
                 BetType(_markets[i]),
                 _data[i],
-                Outcome.NULL
+                Outcome.NULL,
+                true
             ));
-            events[_eventId]._marketsLength++;
         }
     }
 
@@ -644,12 +640,12 @@ contract SocialBet {
     /// @notice Set result
     /// @param _eventId Id of the event
     /// @param _result Result of the event
-    function _setEventResult(uint _eventId, uint[] memory _result) private {
+    function _setEventResult(uint _eventId, uint[] memory _markets, uint[] memory _result) private {
         Event storage _event = events[_eventId];
 
         if (uint(_event._state) != uint(State.CLOSE)) {
-            for (uint i = 0; i < _event._marketsLength; i++) {
-                _event._markets[i]._outcome = Outcome(_result[i]);
+            for (uint i = 0; i < _markets.length; i++) {
+                _event._markets[_markets[i]]._outcome = Outcome(_result[i]);
             }
             _event._state = State.CLOSE;
         }
