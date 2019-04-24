@@ -63,7 +63,6 @@ contract SocialBet {
         uint offerType
     );
     event LogUpdateOffer(uint indexed id, uint amount, uint price);
-    event LogOfferClosed(uint id);
     event LogNewBet(
         uint id,
         uint indexed eventId,
@@ -212,21 +211,6 @@ contract SocialBet {
         _;
     }
 
-    /// @dev Check that the odds of the offer are the same as it was when the user selected the offer
-    modifier checkOddsOffer(uint _offerId, uint _odds) {
-        require(
-            div(
-                mul(
-                    add(offers[_offerId]._amount, offers[_offerId]._price),
-                    100
-                ),
-                offers[_offerId]._price
-            ) == _odds,
-            "Odds different from arguments"
-        );
-        _;
-    }
-
     /** 
 	@notice Create SocialBet smart contract
 	@dev The owner variable is set to the address of the caller of the constructor and the address is set as an admin
@@ -343,25 +327,6 @@ contract SocialBet {
         );
     }
 
-    /// @notice Update the price of an existing offer
-    /// @param _offerId Id of the offer to update
-    /// @param _price Price the bookmaker wants to update the offer to
-    function updateOffer(uint _offerId, uint _price)
-        external
-        offerAvailable(_offerId)
-    {
-        require(offers[_offerId]._owner == msg.sender);
-        require(_price >= m_minAmount);
-
-        offers[_offerId]._price = _price;
-
-        emit LogUpdateOffer(
-            offers[_offerId]._id,
-            offers[_offerId]._amount,
-            offers[_offerId]._price
-        );
-    }
-
     /// @notice Close an existing offer
     /// @param _offerId Id of the offer to close
     function closeOffer(uint _offerId) external {
@@ -376,10 +341,9 @@ contract SocialBet {
     /// @notice Fully or partly buy an offer and open a bet according to the parameters
     /// @param _offerId Id of the offer to buy
     /// @param _amount Amount the bettor wants to buy the offer with
-    function buyOffer(uint _offerId, uint _amount, uint _odds)
+    function buyOffer(uint _offerId, uint _amount)
         public
         offerAvailable(_offerId)
-        checkOddsOffer(_offerId, _odds)
     {
         require(_amount >= m_minAmount);
         require(balances[msg.sender] >= _amount);
@@ -471,7 +435,6 @@ contract SocialBet {
     /// @param _amount Amount the bettor wants to buy the offers with
     function buyOfferBulk(
         uint[] calldata _offerIdArr,
-        uint[] calldata _oddsArr,
         uint _amount
     ) external {
         require(_amount >= m_minAmount);
@@ -481,7 +444,6 @@ contract SocialBet {
         uint _restAmount = _amount;
         uint _offerAmount;
         uint _offerId;
-        uint _odds;
 
         for (uint i = 0; i < _length; i++) {
             if (_restAmount < m_minAmount) {
@@ -489,7 +451,6 @@ contract SocialBet {
             }
 
             _offerId = _offerIdArr[i];
-            _odds = _oddsArr[i];
 
             if (offers[_offerId]._price <= _restAmount) {
                 _offerAmount = offers[_offerId]._price;
@@ -497,7 +458,7 @@ contract SocialBet {
                 _offerAmount = _restAmount;
             }
 
-            buyOffer(_offerId, _offerAmount, _odds);
+            buyOffer(_offerId, _offerAmount);
 
             _restAmount = sub(_restAmount, _offerAmount);
         }
@@ -661,7 +622,7 @@ contract SocialBet {
         offers[_offerId]._amount = 0;
         offers[_offerId]._price = 0;
 
-        emit LogOfferClosed(_offerId);
+        emit LogUpdateOffer(_offerId, offers[_offerId]._amount, offers[_offerId]._price);
     }
 
     /// @notice Create a new Position and adds it to the positions mapping
