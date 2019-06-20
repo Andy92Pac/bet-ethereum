@@ -7,7 +7,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-contracts": "sol-merger \"./contracts/*.sol\" ./build"
   },
   "repository": {
     "type": "git",
@@ -23,11 +24,13 @@
     "bs58": "^4.0.1",
     "dotenv": "^6.1.0",
     "ethereumjs-abi": "^0.6.5",
+    "openzeppelin-solidity": "^2.3.0",
     "truffle": "^5.0.10",
     "truffle-hdwallet-provider": "^1.0.0-web3one.1"
   },
   "devDependencies": {
     "prettier": "^1.17.0",
-    "prettier-plugin-solidity": "^1.0.0-alpha.22"
+    "prettier-plugin-solidity": "^1.0.0-alpha.22",
+    "sol-merger": "^0.1.4"
   }
 }
