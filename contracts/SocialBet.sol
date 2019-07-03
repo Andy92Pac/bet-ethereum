@@ -54,7 +54,7 @@ contract SocialBet {
     event LogNewMarkets(uint id, uint[] markets);
     event LogResultEvent(uint id);
     event LogCancelEvent(uint id);
-    event LogNewOffer(uint id, uint indexed eventId, uint indexed marketIndex, address indexed owner, uint amount, uint price, uint outcome, uint offerType);
+    event LogNewOffer(uint id, uint indexed eventId, uint indexed marketIndex, address indexed owner, uint amount, uint price, uint outcome, uint offerType, uint timestampExpiration);
     event LogUpdateOffer(uint indexed id, uint amount, uint price);
     event LogNewBet(uint id, uint indexed eventId, uint indexed marketIndex, uint backPosition, uint layPosition, uint amount, uint outcome);
     event LogBetClosed(uint id);
@@ -84,6 +84,7 @@ contract SocialBet {
         uint _price;
         Outcome _outcome;
         OfferType _type;
+        uint _timestampExpiration;
     }
 
     struct Bet {
@@ -136,7 +137,7 @@ contract SocialBet {
     modifier offerAvailable(uint _offerId) {
         require(_offerId > 0);
         require(_offerId <= m_nbOffers);
-        require(events[offers[_offerId]._eventId]._timestampStart > now);
+        require(offers[_offerId]._timestampExpiration > now);
         require(
             uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN)
         );
@@ -268,7 +269,8 @@ contract SocialBet {
         uint _amount,
         uint _price,
         uint _outcome,
-        uint _type
+        uint _type,
+        uint _timestampExpiration
     )
         external
         eventAvailable(_eventId)
@@ -289,7 +291,8 @@ contract SocialBet {
             _amount,
             _price,
             Outcome(_outcome),
-            OfferType(_type)
+            OfferType(_type),
+            _timestampExpiration
         );
 
         offers[newOffer._id] = newOffer;
@@ -302,7 +305,8 @@ contract SocialBet {
             newOffer._amount,
             newOffer._price,
             uint(newOffer._outcome),
-            uint(newOffer._type)
+            uint(newOffer._type),
+            newOffer._timestampExpiration
         );
     }
 
@@ -345,7 +349,7 @@ contract SocialBet {
         uint _restAmountOffer = sub( _offer._amount, _amountOfferToBet );
         uint _restPriceOffer = div( mul( _restAmountOffer, _offer._price ), _offer._amount );
 
-        weth.transferFrom(msg.sender, address(this), _amountBuyer);
+        weth.transfer(address(this), _amountBuyer);
         weth.transferFrom(_offer._owner, address(this), _amountOfferToBet);
 
         m_nbBets = add(m_nbBets, 1);
@@ -483,10 +487,18 @@ contract SocialBet {
         emit LogBetClosed(_bet._id);
     }
 
+    function approve(uint _amount) public returns (bool) {
+        weth.approve(address(this), _amount);
+        return true;
+    }
+
     function getBalance(address _account) public view returns (uint256) {
         return weth.balanceOf(_account);
     }
 
+    function getAllowance(address _account) public view returns (uint256) {
+        return weth.allowance(_account, address(this));
+    }
 
     /// @notice Add event
     /// @param _ipfsAddress Hash of the JSON containing event details
