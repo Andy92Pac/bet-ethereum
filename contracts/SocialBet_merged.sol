@@ -506,7 +506,6 @@ contract SocialBet {
     struct Event {
         uint _id;
         bytes32 _ipfsAddress;
-        uint _timestampStart;
         mapping(uint => Market) _markets;
         State _state;
     }
@@ -646,11 +645,10 @@ contract SocialBet {
     /// @notice Add new event to smart contract. The details of the event are found in the ipfs address passed
     function addEvent(
         bytes32 _ipfsAddress,
-        uint _timestampStart,
         uint[] calldata _markets,
         bytes10[] calldata _data
     ) external isAdmin {
-        uint _id = _addEvent(_ipfsAddress, _timestampStart, _markets, _data);
+        uint _id = _addEvent(_ipfsAddress, _markets, _data);
 
         emit LogNewEvent(_id, _ipfsAddress, _markets);
     }
@@ -927,7 +925,6 @@ contract SocialBet {
     /// @param _ipfsAddress Hash of the JSON containing event details
     function _addEvent(
         bytes32 _ipfsAddress,
-        uint _timestampStart,
         uint[] memory _markets,
         bytes10[] memory _data
     ) internal returns (uint _id) {
