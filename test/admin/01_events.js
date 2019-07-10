@@ -20,11 +20,9 @@ contract('SocialBet', ([owner, admin, user, ...accounts]) => {
 		let currentNbEvents = await instance.m_nbEvents.call();
 
 		let ipfsHash = "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4";
-		let timestampStart = await time.latest();
-
 		let bytes32 = utils.getBytes32FromIpfsHash(ipfsHash);
 
-		let txReceipt = await instance.addEvent(bytes32, timestampStart, [], [], {from: admin});
+		let txReceipt = await instance.addEvent(bytes32, [], [], {from: admin});
 
 		await expectEvent.inTransaction(
 			txReceipt.tx, 
@@ -40,12 +38,10 @@ contract('SocialBet', ([owner, admin, user, ...accounts]) => {
 		let currentNbEvents = await instance.m_nbEvents.call();
 
 		let ipfsHash = "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4";
-		let timestampStart = await time.latest();
-
 		let bytes32 = utils.getBytes32FromIpfsHash(ipfsHash);
 
 		await expectRevert(
-			instance.addEvent(bytes32, timestampStart, [], [], {from: user}),
+			instance.addEvent(bytes32, [], [], {from: user}),
 			'Sender is not an admin');
 
 		let newNbEvents = await instance.m_nbEvents.call();
@@ -103,11 +99,9 @@ contract('SocialBet', ([owner, admin, user, ...accounts]) => {
 	it("should cancel event", async () => {
 
 		let ipfsHash = "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4";
-		let timestampStart = await time.latest();
-
 		let bytes32 = utils.getBytes32FromIpfsHash(ipfsHash);
 
-		await instance.addEvent(bytes32, timestampStart, [], [], {from: admin});
+		await instance.addEvent(bytes32, [], [], {from: admin});
 
 		let nbEvents = await instance.m_nbEvents.call();
 
