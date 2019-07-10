@@ -1,4 +1,5 @@
-pragma solidity ^0.5.0;
+pragma solidity >=0.4.21 <0.6.0;
+pragma experimental ABIEncoderV2;
 
 import "./MaticWETH.sol";
 
@@ -108,86 +109,67 @@ contract SocialBet {
 
     /// @dev Check that the caller is the Owner of the smart contract
     modifier isOwner() {
-        require(owner == msg.sender);
+        require(owner == msg.sender, 'Sender it not owner');
         _;
     }
 
     /// @dev Check that the caller have admin rights
     modifier isAdmin() {
-        require(admins[msg.sender]);
+        require(admins[msg.sender], 'Sender is not an admin');
         _;
     }
 
     /// @dev Check that the event exists, is still open and has not started
     modifier eventAvailable(uint _eventId) {
-        require(_eventId > 0);
-        require(_eventId <= m_nbEvents);
-        require(events[_eventId]._timestampStart > now);
-        require(uint(events[_eventId]._state) == uint(State.OPEN));
+        require(_eventId > 0, 'Event id should be greater than 0');
+        require(_eventId <= m_nbEvents, 'Event id does not exist yet');
+        require(uint(events[_eventId]._state) == uint(State.OPEN), 'Event is not open');
         _;
     }
 
     /// @dev Check that the market exists
     modifier marketAvailable(uint _eventId, uint _marketIndex) {
-        require(events[_eventId]._markets[_marketIndex]._active);
+        require(events[_eventId]._markets[_marketIndex]._active, 'Market is not available');
         _;
     }
 
     /// @dev Check that the offer exists and is still open
     modifier offerAvailable(uint _offerId) {
-        require(_offerId > 0);
-        require(_offerId <= m_nbOffers);
-        require(offers[_offerId]._timestampExpiration > now);
-        require(
-            uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN)
-        );
-        require(offers[_offerId]._amount >= m_minAmount);
-        require(offers[_offerId]._price >= m_minAmount);
-        require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount);
-        _;
-    }
-
-    /// @dev Check that the position exists and is still open
-    modifier positionAvailable(uint _positionId) {
-        require(_positionId > 0);
-        require(_positionId <= m_nbPositions);
-        require(
-            events[bets[positions[_positionId]._betId]._eventId]._timestampStart > now
-        );
-        require(
-            uint(
-                events[bets[positions[_positionId]._betId]._eventId]._state
-            ) == uint(State.OPEN)
-        );
-        require(positions[_positionId]._amount >= m_minAmount);
+        require(_offerId > 0, 'Offer id should be greater than 0');
+        require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
+        require(offers[_offerId]._timestampExpiration > now, 'Offer is expired');
+        require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Offer is not open');
+        require(offers[_offerId]._amount >= m_minAmount, 'Offer amount is below minimum');
+        require(offers[_offerId]._price >= m_minAmount, 'Offer price is below minimum');
+        require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
         _;
     }
 
     /// @dev Check that the selected outcome is valid for the type of the selected event (DRAW is not possible for a HOMEAWAY event)
     modifier outcomeValid(uint _eventId, uint _marketIndex, uint _outcome) {
         if (BetType(_marketIndex) == BetType.HOMEAWAYDRAW) {
-            require(_outcome <= uint(Outcome.DRAW));
-            require(_outcome >= uint(Outcome.HOME));
+            require(_outcome <= uint(Outcome.DRAW), 'Selected outcome is not valid for HOMEAWAYDRAW market');
+            require(_outcome >= uint(Outcome.HOME), 'Selected outcome is not valid for HOMEAWAYDRAW market');
         }
         if (BetType(_marketIndex) == BetType.MONEYLINE) {
-            require(_outcome <= uint(Outcome.AWAY));
-            require(_outcome >= uint(Outcome.HOME));
+            require(_outcome <= uint(Outcome.AWAY), 'Selected outcome is not valid for MONEYLINE market');
+            require(_outcome >= uint(Outcome.HOME), 'Selected outcome is not valid for MONEYLINE market');
         }
         if (BetType(_marketIndex) == BetType.OVERUNDER) {
-            require(_outcome <= uint(Outcome.UNDER));
-            require(_outcome >= uint(Outcome.OVER));
+            require(_outcome <= uint(Outcome.UNDER), 'Selected outcome is not valid for OVERUNDER market');
+            require(_outcome >= uint(Outcome.OVER), 'Selected outcome is not valid for OVERUNDER market');
         }
         if (BetType(_marketIndex) == BetType.POINTSPREAD) {
-            require(_outcome <= uint(Outcome.AWAY));
-            require(_outcome >= uint(Outcome.HOME));
+            require(_outcome <= uint(Outcome.AWAY), 'Selected outcome is not valid for POINTSPREAD market');
+            require(_outcome >= uint(Outcome.HOME), 'Selected outcome is not valid for POINTSPREAD market');
         }
         if (BetType(_marketIndex) == BetType.BOTHTEAMSCORE) {
-            require(_outcome <= uint(Outcome.NO));
-            require(_outcome >= uint(Outcome.YES));
+            require(_outcome <= uint(Outcome.NO), 'Selected outcome is not valid for BOTHTEAMSCORE market');
+            require(_outcome >= uint(Outcome.YES), 'Selected outcome is not valid for BOTHTEAMSCORE market');
         }
         if (BetType(_marketIndex) == BetType.FIRSTTEAMTOSCORE) {
-            require(_outcome <= uint(Outcome.AWAY));
-            require(_outcome >= uint(Outcome.HOME));
+            require(_outcome <= uint(Outcome.AWAY), 'Selected outcome is not valid for FIRSTTEAMTOSCORE market');
+            require(_outcome >= uint(Outcome.HOME), 'Selected outcome is not valid for FIRSTTEAMTOSCORE market');
         }
         _;
     }
@@ -215,11 +197,11 @@ contract SocialBet {
     /// @dev The value in the admins mapping is set to false at the passed address key
     /// @param _addr The address to unset from admins
     function removeAdmin(address _addr) external isOwner {
-        require(_addr != owner);
+        require(_addr != owner, 'Owner can not be removed from admins');
         admins[_addr] = false;
     }
 
-    /// @notice Bulk add new events to smart contract. The details of the event are found in the ipfs address passed
+    /// @notice Add new event to smart contract. The details of the event are found in the ipfs address passed
     function addEvent(
         bytes32 _ipfsAddress,
         uint _timestampStart,
@@ -235,13 +217,13 @@ contract SocialBet {
         uint _eventId,
         uint[] calldata _markets,
         bytes10[] calldata _data
-    ) external isAdmin {
+    ) external isAdmin eventAvailable(_eventId) {
         _addMarkets(_eventId, _markets, _data);
 
         emit LogNewMarkets(_eventId, _markets);
     }
 
-    /// @notice Bulk set events result
+    /// @notice Set events result
     function setEventResult(uint _eventId, uint[] calldata _markets, uint[] calldata _outcomes)
         external
         isAdmin
@@ -251,8 +233,11 @@ contract SocialBet {
         emit LogResultEvent(_eventId);
     }
 
-    /// @notice Bulk cancel of events
-    function cancelEvent(uint _eventId) external isAdmin {
+    /// @notice Cancel an event
+    function cancelEvent(uint _eventId) 
+        external 
+        isAdmin
+    {
         _cancelEvent(_eventId);
 
         emit LogCancelEvent(_eventId);
@@ -277,9 +262,8 @@ contract SocialBet {
         marketAvailable(_eventId, _marketIndex)
         outcomeValid(_eventId, _marketIndex, _outcome)
     {
-        require(_price >= m_minAmount);
-        require(_amount >= m_minAmount);
-        require(_amount <= weth.balanceOf(msg.sender));
+        require(_price >= m_minAmount, 'Price is below minimum');
+        require(_amount >= m_minAmount, 'Amount is below minimum');
 
         m_nbOffers = add(m_nbOffers, 1);
 
@@ -313,10 +297,10 @@ contract SocialBet {
     /// @notice Close an existing offer
     /// @param _offerId Id of the offer to close
     function closeOffer(uint _offerId) external {
-        require(_offerId > 0);
-        require(_offerId <= m_nbOffers);
-        require(offers[_offerId]._amount > 0);
-        require(offers[_offerId]._owner == msg.sender);
+        require(_offerId > 0, 'Offer id should be greater than 0');
+        require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
+        require(offers[_offerId]._owner == msg.sender, 'Offer owner is not sender');
+        require(offers[_offerId]._amount > 0, 'Offer is already closed');
 
         _closeOffer(_offerId);
     }
@@ -328,8 +312,8 @@ contract SocialBet {
         public
         offerAvailable(_offerId)
     {
-        require(_amount >= m_minAmount);
-        require(weth.balanceOf(msg.sender) >= _amount);
+        require(_amount >= m_minAmount, 'Amount is below minimum');
+        require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
 
         Offer memory _offer = offers[_offerId];
 
@@ -426,8 +410,8 @@ contract SocialBet {
         uint[] calldata _offerIdArr,
         uint _amount
     ) external {
-        require(_amount >= m_minAmount);
-        require(weth.balanceOf(msg.sender) >= _amount);
+        require(_amount >= m_minAmount, 'Amount is below minimum');
+        require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
 
         uint _length = _offerIdArr.length;
         uint _restAmount = _amount;
@@ -454,30 +438,23 @@ contract SocialBet {
     }
 
     /// @notice Claim bet earnings of a bet open on a close event
-    function claimBetEarnings(uint _positionId) external {
-        require(_positionId > 0);
-        require(_positionId <= m_nbPositions);
-        require(positions[_positionId]._owner == msg.sender);
-        require(
-            uint(bets[positions[_positionId]._betId]._state) == uint(State.OPEN)
-        );
-        require(
-            uint(
-                events[bets[positions[_positionId]._betId]._eventId]._state
-            ) > uint(State.OPEN)
-        );
+    function claimBetEarnings(uint _betId) external {
+        require(_betId > 0, 'Bet id should be greater than 0');
+        require(_betId <= m_nbBets, 'Bet id does not exist');
+        require(uint(bets[_betId]._state) == uint(State.OPEN), 'Bet is not open');
+        require(uint(events[bets[_betId]._eventId]._state) > uint(State.OPEN), 'Event is still open');
 
-        Bet memory _bet = bets[positions[_positionId]._betId];
+        Bet memory _bet = bets[_betId];
         Event storage _event = events[_bet._eventId];
 
         if (uint(_event._state) == uint(State.CANCELED)) {
             weth.transfer(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
             weth.transfer(positions[_bet._layPosition]._owner, positions[_bet._layPosition]._amount);
         } else {
-            if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome && positions[_positionId]._type == OfferType.BACK) {
-                weth.transfer(positions[_positionId]._owner, _bet._amount);
-            } else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome && positions[_positionId]._type == OfferType.LAY) {
-                weth.transfer(positions[_positionId]._owner, _bet._amount);
+            if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
+                weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
+            } else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
+                weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
             }
         }
 
@@ -500,9 +477,12 @@ contract SocialBet {
         return weth.allowance(_account, address(this));
     }
 
+    function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
+        return events[_eventId]._markets[_marketId];
+    }
+
     /// @notice Add event
     /// @param _ipfsAddress Hash of the JSON containing event details
-    /// @param _timestampStart Start timestamp of the event
     function _addEvent(
         bytes32 _ipfsAddress,
         uint _timestampStart,
@@ -514,7 +494,6 @@ contract SocialBet {
         Event memory newEvent;
         newEvent._id = m_nbEvents;
         newEvent._ipfsAddress = _ipfsAddress;
-        newEvent._timestampStart = _timestampStart;
         newEvent._state = State.OPEN;
 
         events[newEvent._id] = newEvent;

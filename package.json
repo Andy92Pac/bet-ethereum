@@ -29,6 +29,8 @@
     "truffle-hdwallet-provider": "^1.0.0-web3one.1"
   },
   "devDependencies": {
+    "chai": "^4.2.0",
+    "openzeppelin-test-helpers": "^0.4.0",
     "prettier": "^1.17.0",
     "prettier-plugin-solidity": "^1.0.0-alpha.22",
     "sol-merger": "^0.1.4"
