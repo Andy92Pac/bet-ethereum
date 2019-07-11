@@ -583,6 +583,7 @@ contract SocialBet {
         require(offers[_offerId]._amount >= m_minAmount, 'Offer amount is below minimum');
         require(offers[_offerId]._price >= m_minAmount, 'Offer price is below minimum');
         require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
+        require(weth.allowance(offers[_offerId]._owner, address(this)) >= m_minAmount, 'Offer owner allowance is below minimum');
         _;
     }
 
@@ -765,8 +766,13 @@ contract SocialBet {
 
         uint _amountOfferToBet = div( mul( _offer._amount, _amountBuyer ), _offer._price );
 
-        if( weth.balanceOf(_offer._owner) < _amountOfferToBet ) {
-        	_amountOfferToBet = weth.balanceOf(_offer._owner);
+        uint _balanceOwner = weth.balanceOf(_offer._owner);
+        uint _allowanceOwner = weth.allowance(_offer._owner, address(this));
+
+        uint _amountAvailableOwner = _balanceOwner > _allowanceOwner ? _allowanceOwner : _balanceOwner;
+
+        if( _amountAvailableOwner < _amountOfferToBet ) {
+        	_amountOfferToBet = _amountAvailableOwner;
         	_amountBuyer = div( mul( _amountOfferToBet, _offer._price ), _offer._amount );
         }
         
@@ -902,19 +908,6 @@ contract SocialBet {
         bets[_bet._id] = _bet;
 
         emit LogBetClosed(_bet._id);
-    }
-
-    function approve(uint _amount) public returns (bool) {
-        weth.approve(address(this), _amount);
-        return true;
-    }
-
-    function getBalance(address _account) public view returns (uint256) {
-        return weth.balanceOf(_account);
-    }
-
-    function getAllowance(address _account) public view returns (uint256) {
-        return weth.allowance(_account, address(this));
     }
 
     function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
