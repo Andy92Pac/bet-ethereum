@@ -1,6 +1,6 @@
 const SocialBet = artifacts.require('./../SocialBet.sol');
 const Weth = artifacts.require('./../MaticWETH');
-const { BN, expectEvent, expectRevert, time } = require('openzeppelin-test-helpers');
+const { BN, expectEvent, expectRevert } = require('openzeppelin-test-helpers');
 const utils = require("./../utils.js");
 
 contract('SocialBet', ([owner, admin, user, ...accounts]) => {
