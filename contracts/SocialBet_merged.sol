@@ -575,7 +575,7 @@ contract SocialBet {
         require(_offerId > 0, 'Offer id should be greater than 0');
         require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
         require(offers[_offerId]._timestampExpiration > now, 'Offer is expired');
-        require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Offer is not open');
+        require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Event is not open');
         require(offers[_offerId]._amount >= m_minAmount, 'Offer amount is below minimum');
         require(offers[_offerId]._price >= m_minAmount, 'Offer price is below minimum');
         require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
@@ -869,23 +869,25 @@ contract SocialBet {
         if (uint(_event._state) == uint(State.CANCELED)) {
             weth.transfer(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
             weth.transfer(positions[_bet._layPosition]._owner, positions[_bet._layPosition]._amount);
-            } else {
-                if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
-                    weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
-                    } else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
-                        weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
-                    }
-                }
-
-                _bet._state = State.CLOSE;
-                bets[_bet._id] = _bet;
-
-                emit LogBetClosed(_bet._id);
+        } 
+        else {
+            if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
+                weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
+            } 
+            else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
+                weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
             }
+        }
 
-            function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
-                return events[_eventId]._markets[_marketId];
-            }
+        _bet._state = State.CLOSE;
+        bets[_bet._id] = _bet;
+
+        emit LogBetClosed(_bet._id);
+    }
+
+    function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
+        return events[_eventId]._markets[_marketId];
+    }
 
     /// @notice Add event
     /// @param _ipfsAddress Hash of the JSON containing event details

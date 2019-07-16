@@ -427,23 +427,25 @@ contract SocialBet {
         if (uint(_event._state) == uint(State.CANCELED)) {
             weth.transfer(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
             weth.transfer(positions[_bet._layPosition]._owner, positions[_bet._layPosition]._amount);
-            } else {
-                if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
-                    weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
-                    } else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
-                        weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
-                    }
-                }
-
-                _bet._state = State.CLOSE;
-                bets[_bet._id] = _bet;
-
-                emit LogBetClosed(_bet._id);
+        } 
+        else {
+            if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
+                weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
+            } 
+            else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
+                weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
             }
+        }
 
-            function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
-                return events[_eventId]._markets[_marketId];
-            }
+        _bet._state = State.CLOSE;
+        bets[_bet._id] = _bet;
+
+        emit LogBetClosed(_bet._id);
+    }
+
+    function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
+        return events[_eventId]._markets[_marketId];
+    }
 
     /// @notice Add event
     /// @param _ipfsAddress Hash of the JSON containing event details
