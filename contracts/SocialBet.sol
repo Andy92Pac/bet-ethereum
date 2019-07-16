@@ -307,6 +307,7 @@ contract SocialBet {
     {
         require(_amount >= m_minAmount, 'Amount is below minimum');
         require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
+        require(weth.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
 
         Offer memory _offer = offers[_offerId];
 
@@ -331,7 +332,7 @@ contract SocialBet {
         uint _restAmountOffer = sub( _offer._amount, _amountOfferToBet );
         uint _restPriceOffer = div( mul( _restAmountOffer, _offer._price ), _offer._amount );
 
-        weth.transfer(address(this), _amountBuyer);
+        weth.transferFrom(msg.sender, address(this), _amountBuyer);
         weth.transferFrom(_offer._owner, address(this), _amountOfferToBet);
 
         m_nbBets = add(m_nbBets, 1);
@@ -373,10 +374,11 @@ contract SocialBet {
         offers[_offer._id]._amount = _restAmountOffer;
         offers[_offer._id]._price = _restPriceOffer;
 
-        emit LogUpdateOffer(_offerId, _restAmountOffer, _restPriceOffer);
-
         if (_restAmountOffer < m_minAmount || _restPriceOffer < m_minAmount) {
             _closeOffer(_offer._id);
+        }
+        else {
+            emit LogUpdateOffer(_offerId, _restAmountOffer, _restPriceOffer);
         }
     }
 

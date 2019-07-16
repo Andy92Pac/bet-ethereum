@@ -33,6 +33,9 @@ contract('SocialBet', ([owner, admin, user, offerOwner, offerBuyer, ...accounts]
 		await token.deposit({from: offerOwner, value: amount});
 		await token.approve(instance.address, amount, {from: offerOwner});
 
+		await token.deposit({from: offerBuyer, value: amount});
+		await token.approve(instance.address, amount, {from: offerBuyer});
+
 		let ipfsHash = "QmRAQB6YaCyidP37UdDnjFY5vQuiBrcqdyoW1CuDgwxkD4";
 		let bytes32 = utils.getBytes32FromIpfsHash(ipfsHash);
 		let markets = [marketIndex];
@@ -64,7 +67,7 @@ contract('SocialBet', ([owner, admin, user, offerOwner, offerBuyer, ...accounts]
 	});
 
 	it("should revert because offer doesn't exist", async () => {
-		let nbOffers = offerId = await instance.m_nbOffers.call();
+		let nbOffers = await instance.m_nbOffers.call();
 
 		let invalidOfferId = (parseInt(nbOffers) + 1).toString();
 		
@@ -86,22 +89,97 @@ contract('SocialBet', ([owner, admin, user, offerOwner, offerBuyer, ...accounts]
 	});
 
 	it("should revert because offer owner balance is below minimum", async () => {
+		let balance = await token.balanceOf(offerOwner);
+		await token.transfer(admin, balance, {from: offerOwner});
 
+		await expectRevert(
+			instance.buyOffer(offerId, amount, {from: offerBuyer}),
+			'Offer owner balance is below minimum');
 	});
 
 	it("should revert because offer owner allowance is below minimum", async () => {
+		await token.deposit({from: offerOwner, value: amount});
+		await token.approve(instance.address, '1000', {from: offerOwner});
 
+		await expectRevert(
+			instance.buyOffer(offerId, amount, {from: offerBuyer}),
+			'Offer owner allowance is below minimum');
 	});
 
 	it("should revert because amount is below minimum", async () => {
+		await token.approve(instance.address, amount, {from: offerOwner});
 
+		await expectRevert(
+			instance.buyOffer(offerId, '1000', {from: offerBuyer}),
+			'Amount is below minimum');
 	});
 
 	it("should revert because amount exceeds sender balance", async () => {
+		await expectRevert(
+			instance.buyOffer(offerId, web3.utils.toWei('2', 'ether'), {from: offerBuyer}),
+			'Amount exceeds sender balance');
+	});
 
+	it("should revert because amount exceeds sender allowance", async () => {
+		await token.approve(instance.address, '1000', {from: offerBuyer});
+
+		await expectRevert(
+			instance.buyOffer(offerId, web3.utils.toWei('1', 'ether'), {from: offerBuyer}),
+			'Amount exceeds sender allowance');
 	});
 
 	it("should buy the offer", async () => {
+		await token.approve(instance.address, amount, {from: offerBuyer});
 
+		let txReceipt = await instance.buyOffer(offerId, amount, {from: offerBuyer});
+
+		let nbPosition = await instance.m_nbPositions.call();
+		let nbBets = await instance.m_nbBets.call();
+
+		await expectEvent.inTransaction(
+			txReceipt.tx, 
+			SocialBet,
+			'LogNewPosition',
+			{
+				id: (nbPosition - 1).toString(),
+				betId: nbBets.toString(),
+				owner: offerBuyer,
+				amount: amount
+			});
+
+		await expectEvent.inTransaction(
+			txReceipt.tx, 
+			SocialBet,
+			'LogNewPosition',
+			{
+				id: nbPosition,
+				betId: nbBets.toString(),
+				owner: offerOwner,
+				amount: amount
+			});
+
+		await expectEvent.inTransaction(
+			txReceipt.tx, 
+			SocialBet,
+			'LogNewBet',
+			{
+				id: nbBets.toString(),
+				eventId: eventId,
+				marketIndex: marketIndex.toString(),
+				backPosition: (nbPosition - 1).toString(),
+				layPosition: nbPosition,
+				amount: (parseInt(amount) + parseInt(amount)).toString(),
+				outcome: outcome.toString(),
+			});
+
+		await expectEvent.inTransaction(
+			txReceipt.tx, 
+			SocialBet,
+			'LogUpdateOffer',
+			{
+				id: offerId,
+				amount: '0',
+				price: '0',
+			});
 	});
 });
