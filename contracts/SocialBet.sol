@@ -133,7 +133,7 @@ contract SocialBet {
         require(_offerId > 0, 'Offer id should be greater than 0');
         require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
         require(offers[_offerId]._timestampExpiration > now, 'Offer is expired');
-        require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Offer is not open');
+        require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Event is not open');
         require(offers[_offerId]._amount >= m_minAmount, 'Offer amount is below minimum');
         require(offers[_offerId]._price >= m_minAmount, 'Offer price is below minimum');
         require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
