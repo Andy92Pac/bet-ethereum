@@ -391,6 +391,7 @@ contract SocialBet {
         ) external {
         require(_amount >= m_minAmount, 'Amount is below minimum');
         require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
+        require(weth.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
 
         uint _length = _offerIdArr.length;
         uint _restAmount = _amount;
