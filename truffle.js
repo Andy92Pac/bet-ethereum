@@ -38,7 +38,13 @@ module.exports = {
       network_id: 1,
       gas: 3000000,
       gasPrice: 10000000000
-    }
+    },
+    matic: {
+      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://testnet2.matic.network"),
+      network_id: 8995,
+      gas: 300000000,
+      gasPrice: 0
+    },
   },
   compilers: {
     solc: {
