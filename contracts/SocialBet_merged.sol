@@ -664,6 +664,7 @@ contract SocialBet {
     function setEventResult(uint _eventId, uint[] calldata _markets, uint[] calldata _outcomes)
     external
     isAdmin
+    eventAvailable(_eventId)
     {
         _setEventResult(_eventId, _markets, _outcomes);
 
@@ -674,6 +675,7 @@ contract SocialBet {
     function cancelEvent(uint _eventId) 
     external 
     isAdmin
+    eventAvailable(_eventId)
     {
         _cancelEvent(_eventId);
 
@@ -833,6 +835,7 @@ contract SocialBet {
         ) external {
         require(_amount >= m_minAmount, 'Amount is below minimum');
         require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
+        require(weth.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
 
         uint _length = _offerIdArr.length;
         uint _restAmount = _amount;
@@ -943,7 +946,7 @@ contract SocialBet {
     function _setEventResult(uint _eventId, uint[] memory _markets, uint[] memory _result) private {
         Event storage _event = events[_eventId];
 
-        if (uint(_event._state) != uint(State.CLOSE)) {
+        if (uint(_event._state) == uint(State.OPEN)) {
             for (uint i = 0; i < _markets.length; i++) {
                 _event._markets[_markets[i]]._outcome = Outcome(_result[i]);
             }
