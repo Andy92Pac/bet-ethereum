@@ -46,9 +46,6 @@ contract SocialBet {
 
     enum BetType {HOMEAWAYDRAW, MONEYLINE, OVERUNDER, POINTSPREAD, BOTHTEAMSCORE, FIRSTTEAMTOSCORE}
 
-    event LogDeposit(address indexed account, uint amount);
-    event LogWithdraw(address indexed account, uint amount);
-    event LogBalanceChange(address indexed account, uint oldBalance, uint newBalance);
     event LogNewEvent(uint id, bytes32 ipfsAddress, uint[] markets);
     event LogNewMarkets(uint id, uint[] markets);
     event LogResultEvent(uint id);
