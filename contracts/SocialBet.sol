@@ -1,20 +1,26 @@
 pragma solidity >=0.4.21 <0.6.0;
 pragma experimental ABIEncoderV2;
 
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "./MaticWETH.sol";
 
-
-/// @title SocialBet
-/// @notice
-/// @dev
+/// @title SocialBet contract
+/// @author Andy Mpondo Black
+/// @notice This contract is used for SocialBet decentralized sports betting platform
+/// @dev This contract interact with WETH ERC-20 token contract
 contract SocialBet {
+
+    using SafeMath for uint;
+
+    /***************************************************************************
+     *                      Variables, Constants & Enums                       *
+     ***************************************************************************/
+
     /// @notice Owner of SocialBet smart contract
     address payable public owner;
 
-    /**
-    * token contract for transfers.
-    */
-    MaticWETH public weth;
+    /// @notice token contract for transfers
+    MaticWETH public Token;
 
     /// @notice Administrators mapping
     mapping(address => bool) public admins;
@@ -37,7 +43,7 @@ contract SocialBet {
     /// @notice Number of positions, used to set id of created positions
     uint public m_nbPositions;
 
-    /// @notice Minimum ammount to maintain an Offer or a Position open to sell
+    /// @notice Minimum ammount to maintain an Offer open to sell
     uint public m_minAmount = 10000000000000000;
 
     enum State {OPEN, CLOSE, CANCELED}
@@ -46,17 +52,90 @@ contract SocialBet {
 
     enum BetType {HOMEAWAYDRAW, MONEYLINE, OVERUNDER, POINTSPREAD, BOTHTEAMSCORE, FIRSTTEAMTOSCORE}
 
-    event LogNewEvent(uint id, bytes32 ipfsAddress, uint[] markets);
-    event LogNewMarkets(uint id, uint[] markets);
-    event LogResultEvent(uint id);
-    event LogCancelEvent(uint id);
-    event LogNewOffer(uint id, uint indexed eventId, uint indexed marketIndex, address indexed owner, uint amount, uint price, uint outcome, uint timestampExpiration);
-    event LogUpdateOffer(uint indexed id, uint amount, uint price);
-    event LogNewBet(uint id, uint indexed eventId, uint indexed marketIndex, uint backPosition, uint layPosition, uint amount, uint outcome);
-    event LogBetClosed(uint id);
-    event LogNewPosition(uint id, uint indexed betId, address indexed owner, uint amount);
+    /***************************************************************************
+     *                                 Events                                  *
+     ***************************************************************************/
 
-    struct Event {
+    /**
+     * Event for new event creation
+     * @param id Id of the created event
+     * @param ipfsAddress Ipfs hash of the created event
+     * @param markets Markets of the created event
+     */
+     event LogNewEvent(uint id, bytes32 ipfsAddress, uint[] markets);
+
+    /**
+     * Event for new markets adding
+     * @param id Id of the event
+     * @param markets Markets added to the event
+     */
+     event LogNewMarkets(uint id, uint[] markets);
+
+    /**
+     * Event for finalized event
+     * @param id Id of the event
+     */
+     event LogResultEvent(uint id);
+
+    /**
+     * Event for canceled event
+     * @param id Id of the event
+     */
+     event LogCancelEvent(uint id);
+
+    /**
+     * Event for new offer creation
+     * @param id Id of the created offer
+     * @param eventId Id of the event
+     * @param marketIndex Index of the market
+     * @param owner Address of the owner
+     * @param amount Amount of the offer
+     * @param price Price of the offer
+     * @param outcome Outcome of the offer
+     * @param timestampExpiration Timestamp of expiration of the offer
+     */
+     event LogNewOffer(uint id, uint indexed eventId, uint indexed marketIndex, address indexed owner, uint amount, uint price, uint outcome, uint timestampExpiration);
+
+    /**
+     * Event for updated offer
+     * @param id Id of the updated offer
+     * @param amount Amount of the offer
+     * @param price Price of the offer
+     */
+     event LogUpdateOffer(uint indexed id, uint amount, uint price);
+
+    /**
+     * Event for new bet creation
+     * @param id Id of the created bet
+     * @param eventId Id of the event
+     * @param marketIndex Index of the market
+     * @param backPosition Id of the back position of the bet
+     * @param layPosition Id of the lay position of the bet
+     * @param amount Amount of the bet
+     * @param outcome Outcome of the bet
+     */
+     event LogNewBet(uint id, uint indexed eventId, uint indexed marketIndex, uint backPosition, uint layPosition, uint amount, uint outcome);
+
+    /**
+     * Event for closed bet
+     * @param id Id of the closed bet
+     */
+     event LogBetClosed(uint id);
+
+    /**
+     * Event for new position creation
+     * @param id Id of the created position
+     * @param betId Id of the bet
+     * @param owner Owner of the position
+     * @param amount Amount of the position
+     */
+     event LogNewPosition(uint id, uint indexed betId, address indexed owner, uint amount);
+
+    /***************************************************************************
+     *                               Structures                                *
+     ***************************************************************************/
+
+     struct Event {
         uint _id;
         bytes32 _ipfsAddress;
         mapping(uint => Market) _markets;
@@ -99,19 +178,23 @@ contract SocialBet {
         uint _amount;
     }
 
-    /// @dev Check that the caller is the Owner of the smart contract
+    /***************************************************************************
+     *                                Modifiers                                *
+     ***************************************************************************/
+
+    /// @notice Check that the caller is the owner of the smart contract
     modifier isOwner() {
         require(owner == msg.sender, 'Sender it not owner');
         _;
     }
 
-    /// @dev Check that the caller have admin rights
+    /// @notice Check that the caller have admin rights
     modifier isAdmin() {
         require(admins[msg.sender], 'Sender is not an admin');
         _;
     }
 
-    /// @dev Check that the event exists, is still open and has not started
+    /// @notice Check that the event exists and is still open
     modifier eventAvailable(uint _eventId) {
         require(_eventId > 0, 'Event id should be greater than 0');
         require(_eventId <= m_nbEvents, 'Event id does not exist yet');
@@ -119,13 +202,13 @@ contract SocialBet {
         _;
     }
 
-    /// @dev Check that the market exists
+    /// @notice Check that the market exists in the selected event
     modifier marketAvailable(uint _eventId, uint _marketIndex) {
         require(events[_eventId]._markets[_marketIndex]._active, 'Market is not available');
         _;
     }
 
-    /// @dev Check that the offer exists and is still open
+    /// @notice Check that the offer exists and is still open
     modifier offerAvailable(uint _offerId) {
         require(_offerId > 0, 'Offer id should be greater than 0');
         require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
@@ -133,12 +216,12 @@ contract SocialBet {
         require(uint(events[offers[_offerId]._eventId]._state) == uint(State.OPEN), 'Event is not open');
         require(offers[_offerId]._amount >= m_minAmount, 'Offer amount is below minimum');
         require(offers[_offerId]._price >= m_minAmount, 'Offer price is below minimum');
-        require(weth.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
-        require(weth.allowance(offers[_offerId]._owner, address(this)) >= m_minAmount, 'Offer owner allowance is below minimum');
+        require(Token.balanceOf(offers[_offerId]._owner) >= m_minAmount, 'Offer owner balance is below minimum');
+        require(Token.allowance(offers[_offerId]._owner, address(this)) >= m_minAmount, 'Offer owner allowance is below minimum');
         _;
     }
 
-    /// @dev Check that the selected outcome is valid for the type of the selected event (DRAW is not possible for a HOMEAWAY event)
+    /// @notice Check that the selected outcome is valid for the type of the selected event
     modifier outcomeValid(uint _eventId, uint _marketIndex, uint _outcome) {
         if (BetType(_marketIndex) == BetType.HOMEAWAYDRAW) {
             require(_outcome <= uint(Outcome.DRAW), 'Selected outcome is not valid for HOMEAWAYDRAW market');
@@ -167,34 +250,51 @@ contract SocialBet {
         _;
     }
 
+    /***************************************************************************
+     *                               Constructor                               *
+     ***************************************************************************/
+
     /** 
-	@notice Create SocialBet smart contract
-	@dev The owner variable is set to the address of the caller of the constructor and the address is set as an admin
-	*/
-    constructor(address _weth) public {
+	* @notice Constructor, take _tokenAddress
+    * @param _tokenAddress Address of the token used
+    */
+    constructor(address _tokenAddress) public {
         owner = msg.sender;
-        weth = MaticWETH(_weth);
+        Token = MaticWETH(_tokenAddress);
         addAdmin(msg.sender);
     }
 
+    /***************************************************************************
+     *                             Owner functions                             *
+     ***************************************************************************/
+
     /**
-	@notice Add passed address as an admin
-	@dev The value in the admins mapping is set to true at the passed address key
-	@param _addr The address to set as an admin
+	* @notice Set address as an admin
+	* @param _addr The address to set as an admin
 	*/
     function addAdmin(address _addr) public isOwner {
         admins[_addr] = true;
     }
 
-    /// @notice Remove passed address from admins
-    /// @dev The value in the admins mapping is set to false at the passed address key
-    /// @param _addr The address to unset from admins
+    /**
+    * @notice Remove address from admins
+    * @param _addr The address to unset from admins
+    */
     function removeAdmin(address _addr) external isOwner {
         require(_addr != owner, 'Owner can not be removed from admins');
         admins[_addr] = false;
     }
 
-    /// @notice Add new event to smart contract. The details of the event are found in the ipfs address passed
+    /***************************************************************************
+     *                             Admin functions                             *
+     ***************************************************************************/
+
+    /**
+    * @notice Add new event to smart contract. The details of the event are found in the ipfs address
+    * @param _ipfsAddress Ipfs address containing informations about the Event
+    * @param _markets Markets available for the Event
+    * @param _data Additionnal data about the Markets
+    */
     function addEvent(
         bytes32 _ipfsAddress,
         uint[] calldata _markets,
@@ -205,6 +305,12 @@ contract SocialBet {
         emit LogNewEvent(_id, _ipfsAddress, _markets);
     }
 
+    /**
+    * @notice Add new markets to existing event
+    * @param _eventId Id of the Event
+    * @param _markets Markets available for the Event
+    * @param _data Additionnal data about the Markets
+    */
     function addMarkets(
         uint _eventId,
         uint[] calldata _markets,
@@ -215,7 +321,12 @@ contract SocialBet {
         emit LogNewMarkets(_eventId, _markets);
     }
 
-    /// @notice Set events result
+    /**
+    * @notice Set results to an event markets
+    * @param _eventId Id of the Event
+    * @param _markets Markets to set results to
+    * @param _outcomes Outcomes of the Markets
+    */
     function setEventResult(uint _eventId, uint[] calldata _markets, uint[] calldata _outcomes)
     external
     isAdmin
@@ -226,7 +337,10 @@ contract SocialBet {
         emit LogResultEvent(_eventId);
     }
 
-    /// @notice Cancel an event
+    /**
+    * @notice Cancel an event
+    * @param _eventId Id of the Event
+    */
     function cancelEvent(uint _eventId) 
     external 
     isAdmin
@@ -237,11 +351,19 @@ contract SocialBet {
         emit LogCancelEvent(_eventId);
     }
 
-    /// @notice Open a new offer on the selected event with the parameters passed as arguments
-    /// @param _eventId Id of the event the offer is created on
-    /// @param _amount Amount the bookmaker is putting on the offer
-    /// @param _price Price the bookmaker is selling the offer for
-    /// @param _outcome Outcome of the event the bookmaker is opening the offer on
+    /***************************************************************************
+     *                            External functions                           *
+     ***************************************************************************/
+
+    /**
+    * @notice Open a new offer
+    * @param _eventId Id of the Event
+    * @param _marketIndex Index of the Market
+    * @param _amount Amount the bookmaker is putting on the Offer
+    * @param _price Price the bookmaker is selling the Offer for
+    * @param _outcome Outcome of the market the bookmaker is opening the Offer on
+    * @param _timestampExpiration timestamp the Offer expires on
+    */
     function openOffer(
         uint _eventId,
         uint _marketIndex,
@@ -259,7 +381,7 @@ contract SocialBet {
         require(_amount >= m_minAmount, 'Amount is below minimum');
         require(_timestampExpiration >= now, 'Expiration timestamp is in the past');
 
-        m_nbOffers = add(m_nbOffers, 1);
+        m_nbOffers = m_nbOffers.add(1);
 
         Offer memory newOffer = Offer(
             m_nbOffers,
@@ -286,8 +408,10 @@ contract SocialBet {
             );
     }
 
-    /// @notice Close an existing offer
-    /// @param _offerId Id of the offer to close
+    /**
+    * @notice Close an offer
+    * @param _offerId Id of the Offer
+    */
     function closeOffer(uint _offerId) external {
         require(_offerId > 0, 'Offer id should be greater than 0');
         require(_offerId <= m_nbOffers, 'Offer id does not exist yet');
@@ -297,16 +421,18 @@ contract SocialBet {
         _closeOffer(_offerId);
     }
 
-    /// @notice Fully or partly buy an offer and open a bet according to the parameters
-    /// @param _offerId Id of the offer to buy
-    /// @param _amount Amount the bettor wants to buy the offer with
+    /**
+    * @notice Buy an offer
+    * @param _offerId Id of the Offer
+    * @param _amount Amount you're buying the Offer with
+    */
     function buyOffer(uint _offerId, uint _amount)
     public
     offerAvailable(_offerId)
     {
         require(_amount >= m_minAmount, 'Amount is below minimum');
-        require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
-        require(weth.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
+        require(Token.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
+        require(Token.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
 
         Offer memory _offer = offers[_offerId];
 
@@ -316,25 +442,25 @@ contract SocialBet {
         	_amountBuyer = _offer._price;
         }
 
-        uint _amountOfferToBet = div( mul( _offer._amount, _amountBuyer ), _offer._price );
+        uint _amountOfferToBet = _offer._amount.mul(_amountBuyer).div(_offer._price);
 
-        uint _balanceOwner = weth.balanceOf(_offer._owner);
-        uint _allowanceOwner = weth.allowance(_offer._owner, address(this));
+        uint _balanceOwner = Token.balanceOf(_offer._owner);
+        uint _allowanceOwner = Token.allowance(_offer._owner, address(this));
 
         uint _amountAvailableOwner = _balanceOwner > _allowanceOwner ? _allowanceOwner : _balanceOwner;
 
         if( _amountAvailableOwner < _amountOfferToBet ) {
         	_amountOfferToBet = _amountAvailableOwner;
-        	_amountBuyer = div( mul( _amountOfferToBet, _offer._price ), _offer._amount );
+        	_amountBuyer = _amountOfferToBet.mul(_offer._price).div(_offer._amount);
         }
         
-        uint _restAmountOffer = sub( _offer._amount, _amountOfferToBet );
-        uint _restPriceOffer = div( mul( _restAmountOffer, _offer._price ), _offer._amount );
+        uint _restAmountOffer = _offer._amount.sub(_amountOfferToBet);
+        uint _restPriceOffer = _restAmountOffer.mul(_offer._price).div(_offer._amount);
 
-        weth.transferFrom(msg.sender, address(this), _amountBuyer);
-        weth.transferFrom(_offer._owner, address(this), _amountOfferToBet);
+        Token.transferFrom(msg.sender, address(this), _amountBuyer);
+        Token.transferFrom(_offer._owner, address(this), _amountOfferToBet);
 
-        m_nbBets = add(m_nbBets, 1);
+        m_nbBets = m_nbBets.add(1);
 
         Bet memory _newBet;
         _newBet._id = m_nbBets;
@@ -381,18 +507,20 @@ contract SocialBet {
         }
     }
 
-    /// @notice Fully or partly buy multiple offers and open bets according to the parameters
-    /// @param _offerIdArr Array of the id of the offers to buy
-    /// @param _amount Amount the bettor wants to buy the offers with
+    /**
+    * @notice Buy multiple offers
+    * @param _offerIds Offers to buy
+    * @param _amount Amount you're buying the Offers with
+    */
     function buyOfferBulk(
-        uint[] calldata _offerIdArr,
+        uint[] calldata _offerIds,
         uint _amount
         ) external {
         require(_amount >= m_minAmount, 'Amount is below minimum');
-        require(weth.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
-        require(weth.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
+        require(Token.balanceOf(msg.sender) >= _amount, 'Amount exceeds sender balance');
+        require(Token.allowance(msg.sender, address(this)) >= _amount, 'Amount exceeds sender allowance');
 
-        uint _length = _offerIdArr.length;
+        uint _length = _offerIds.length;
         uint _restAmount = _amount;
         uint _offerAmount;
         uint _offerId;
@@ -402,7 +530,7 @@ contract SocialBet {
                 break;
             }
 
-            _offerId = _offerIdArr[i];
+            _offerId = _offerIds[i];
 
             if (offers[_offerId]._price <= _restAmount) {
                 _offerAmount = offers[_offerId]._price;
@@ -412,11 +540,14 @@ contract SocialBet {
 
                 buyOffer(_offerId, _offerAmount);
 
-                _restAmount = sub(_restAmount, _offerAmount);
+                _restAmount = _restAmount.sub(_offerAmount);
             }
         }
 
-    /// @notice Claim bet earnings of a bet open on a close event
+    /**
+    * @notice Close a bet and send earnings to winner
+    * @param _betId Id of the Bet to close
+    */
     function claimBetEarnings(uint _betId) external {
         require(_betId > 0, 'Bet id should be greater than 0');
         require(_betId <= m_nbBets, 'Bet id does not exist');
@@ -427,15 +558,15 @@ contract SocialBet {
         Event storage _event = events[_bet._eventId];
 
         if (uint(_event._state) == uint(State.CANCELED)) {
-            weth.transfer(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
-            weth.transfer(positions[_bet._layPosition]._owner, positions[_bet._layPosition]._amount);
+            Token.transfer(positions[_bet._backPosition]._owner, positions[_bet._backPosition]._amount);
+            Token.transfer(positions[_bet._layPosition]._owner, positions[_bet._layPosition]._amount);
         } 
         else {
             if (_event._markets[_bet._marketIndex]._outcome == _bet._outcome) {
-                weth.transfer(positions[_bet._backPosition]._owner, _bet._amount);
+                Token.transfer(positions[_bet._backPosition]._owner, _bet._amount);
             } 
             else if (_event._markets[_bet._marketIndex]._outcome != _bet._outcome) {
-                weth.transfer(positions[_bet._layPosition]._owner, _bet._amount);
+                Token.transfer(positions[_bet._layPosition]._owner, _bet._amount);
             }
         }
 
@@ -445,18 +576,31 @@ contract SocialBet {
         emit LogBetClosed(_bet._id);
     }
 
-    function getMarket(uint _eventId, uint _marketId) public view returns (Market memory) {
-        return events[_eventId]._markets[_marketId];
+    /**
+    * @notice Returns a market
+    * @param _eventId Id of the Event
+    * @param _marketIndex Index of the Market
+    */
+    function getMarket(uint _eventId, uint _marketIndex) public view returns (Market memory) {
+        return events[_eventId]._markets[_marketIndex];
     }
 
-    /// @notice Add event
-    /// @param _ipfsAddress Hash of the JSON containing event details
+    /***************************************************************************
+     *                             Private functions                           *
+     ***************************************************************************/
+
+    /**
+    * @notice Private function that create an Event and add it to the mapping
+    * @param _ipfsAddress Ipfs address containing informations about the Event
+    * @param _markets Markets available for the Event
+    * @param _data Additionnal data about the Markets
+    */
     function _addEvent(
         bytes32 _ipfsAddress,
         uint[] memory _markets,
         bytes10[] memory _data
-        ) internal returns (uint _id) {
-        m_nbEvents = add(m_nbEvents, 1);
+        ) private returns (uint _id) {
+        m_nbEvents = m_nbEvents.add(1);
 
         Event memory newEvent;
         newEvent._id = m_nbEvents;
@@ -470,11 +614,17 @@ contract SocialBet {
         _id = m_nbEvents;
     }
 
+    /**
+    * @notice Private function that add new markets to existing event
+    * @param _eventId Id of the Event
+    * @param _markets Markets available for the Event
+    * @param _data Additionnal data about the Markets
+    */
     function _addMarkets(
         uint _eventId,
         uint[] memory _markets,
         bytes10[] memory _data
-        ) internal {
+        ) private {
         for (uint i = 0; i < _markets.length; i++) {
             events[_eventId]._markets[_markets[i]] = (Market(
                 BetType(_markets[i]),
@@ -485,8 +635,27 @@ contract SocialBet {
         }
     }
 
-    /// @notice Cancel event
-    /// @param _eventId Id of the event
+    /**
+    * @notice Private function that set results to an event markets
+    * @param _eventId Id of the Event
+    * @param _markets Markets to set results to
+    * @param _outcomes Outcomes of the Markets
+    */
+    function _setEventResult(uint _eventId, uint[] memory _markets, uint[] memory _outcomes) private {
+        Event storage _event = events[_eventId];
+
+        if (uint(_event._state) == uint(State.OPEN)) {
+            for (uint i = 0; i < _markets.length; i++) {
+                _event._markets[_markets[i]]._outcome = Outcome(_outcomes[i]);
+            }
+            _event._state = State.CLOSE;
+        }
+    }
+
+    /**
+    * @notice Private function that cancel an event
+    * @param _eventId Id of the Event
+    */
     function _cancelEvent(uint _eventId) private {
         Event memory _event = events[_eventId];
 
@@ -495,22 +664,10 @@ contract SocialBet {
         events[_event._id] = _event;
     }
 
-    /// @notice Set result
-    /// @param _eventId Id of the event
-    /// @param _result Result of the event
-    function _setEventResult(uint _eventId, uint[] memory _markets, uint[] memory _result) private {
-        Event storage _event = events[_eventId];
-
-        if (uint(_event._state) == uint(State.OPEN)) {
-            for (uint i = 0; i < _markets.length; i++) {
-                _event._markets[_markets[i]]._outcome = Outcome(_result[i]);
-            }
-            _event._state = State.CLOSE;
-        }
-    }
-
-    /// @notice Close an existing offer
-    /// @param _offerId Id of the offer to close
+    /**
+    * @notice Private function that close an offer
+    * @param _offerId Id of the Offer
+    */
     function _closeOffer(uint _offerId) private {
         offers[_offerId]._amount = 0;
         offers[_offerId]._price = 0;
@@ -518,16 +675,18 @@ contract SocialBet {
         emit LogUpdateOffer(_offerId, offers[_offerId]._amount, offers[_offerId]._price);
     }
 
-    /// @notice Create a new Position and adds it to the positions mapping
-    /// @param _betId Id of the bet associated to the created position
-    /// @param _owner Owner of the created position
-    /// @param _amount Amount the owner have in the created position
+    /**
+    * @notice Private function that create a Position and add it to the mapping 
+    * @param _betId Id of the related Bet
+    * @param _owner Owner of the Position
+    * @param _amount Amount of the Position
+    */
     function _createPosition(
         uint _betId,
         address _owner,
         uint _amount
         ) private returns (Position memory newPosition) {
-        m_nbPositions = add(m_nbPositions, 1);
+        m_nbPositions = m_nbPositions.add(1);
 
         newPosition = Position(m_nbPositions, _betId, _owner, _amount);
 
@@ -536,37 +695,16 @@ contract SocialBet {
         _logNewPosition(newPosition);
     }
 
-    function _logNewPosition(Position memory newPosition) private {
+    /**
+    * @notice Emits the logNewPosition event  
+    * @param _newPosition Position to log
+    */
+    function _logNewPosition(Position memory _newPosition) private {
         emit LogNewPosition(
-            newPosition._id,
-            newPosition._betId,
-            newPosition._owner,
-            newPosition._amount
+            _newPosition._id,
+            _newPosition._betId,
+            _newPosition._owner,
+            _newPosition._amount
             );
     }
-
-    function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        assert(_b <= _a);
-        return _a - _b;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        assert(c >= a);
-        return c;
-    }
-
-    function mul(uint256 _a, uint256 _b) internal pure returns (uint256 c) {
-        if (_a == 0) {
-            return 0;
-        }
-        c = _a * _b;
-        assert(c / _a == _b);
-        return c;
-    }
-
-    function div(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        return _a / _b;
-    }
-
 }
