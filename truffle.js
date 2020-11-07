@@ -42,7 +42,13 @@ module.exports = {
     matic: {
       provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://testnet2.matic.network"),
       network_id: 8995,
-      gas: 300000000,
+      gas: 8000000,
+      gasPrice: 0
+    },
+    mumbai: {
+      provider: () => new HDWalletProvider(process.env.MNENOMIC, "https://rpc-mumbai.matic.today"),
+      network_id: 80001,
+      gas: 8000000,
       gasPrice: 0
     },
   },

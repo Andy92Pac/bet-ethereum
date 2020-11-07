@@ -1,6 +1,6 @@
 var SocialBet = artifacts.require('./SocialBet.sol');
 
 module.exports = function(deployer) {
-	const maticWethAddress = '0x31074c34a757a4b9FC45169C58068F43B717b2D0';
+	const maticWethAddress = '0xfe4F5145f6e09952a5ba9e956ED0C25e3Fa4c7F1';
 	deployer.deploy(SocialBet, maticWethAddress);
 };
