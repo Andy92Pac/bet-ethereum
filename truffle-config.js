@@ -56,5 +56,6 @@ module.exports = {
     solc: {
       version: "0.5.8"
     }
-  }
+  },
+  networkCheckTimeout: 10000000
 }
